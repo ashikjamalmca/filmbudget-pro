@@ -158,7 +158,12 @@ export function DailyExpenseEntry({ projectId }: Props) {
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <Card className="p-4 md:p-6">
-        <h2 className="text-lg md:text-xl mb-4 md:mb-6">Add Daily Expenses</h2>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-lg md:text-xl">Add Daily Expenses</h2>
+          <Button variant="outline" size="sm" onClick={addRow}>
+            <Plus className="w-4 h-4 mr-2" /> Add New Row
+          </Button>
+        </div>
 
         {error && <p className="text-red-600 text-sm mb-4 bg-red-50 p-3 rounded">{error}</p>}
         {saved && (
@@ -370,11 +375,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
           })}
         </div>
 
-        {/* Add row + Daily Total */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t mt-4">
-          <Button variant="outline" onClick={addRow} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" /> Add New Row
-          </Button>
+        {/* Daily Total */}
+        <div className="flex justify-end pt-4 border-t mt-4">
           <div className="text-right">
             <p className="text-sm text-gray-500 mb-0.5">Daily Total</p>
             <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(calculateTotal())}</p>
