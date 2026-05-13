@@ -10,7 +10,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTenants } from '../hooks/useTenants';
@@ -667,73 +666,60 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
           </Card>
         </div>
 
-        {/* Main tabbed content */}
-        <Tabs defaultValue="tenants">
-          <TabsList className="mb-2">
-            <TabsTrigger value="tenants" className="flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5" /> Tenants
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" /> Expense Categories
-            </TabsTrigger>
-          </TabsList>
+        {/* Tenant table */}
+        <Card className="overflow-hidden">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-900">All Tenants</h2>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={refetch} className="text-slate-500">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+              </Button>
+              <CreateTenantModal onCreated={refetch} />
+            </div>
+          </div>
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+          ) : tenants.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No tenants yet.</p>
+              <p className="text-sm text-gray-400">Create your first producer tenant to get started.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium">Company</th>
+                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Users</th>
+                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Projects</th>
+                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Plan</th>
+                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Valid Until</th>
+                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Status</th>
+                    <th className="text-right py-3 px-4 text-xs text-slate-500 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenants.map(t => <TenantRow key={t.id} tenant={t} onRefresh={refetch} />)}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
 
-          {/* ── Tenants Tab ── */}
-          <TabsContent value="tenants">
-            <Card className="overflow-hidden">
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-slate-900">All Tenants</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={refetch} className="text-slate-500">
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
-                  </Button>
-                  <CreateTenantModal onCreated={refetch} />
-                </div>
-              </div>
-              {loading ? (
-                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
-              ) : tenants.length === 0 ? (
-                <div className="text-center py-12">
-                  <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No tenants yet.</p>
-                  <p className="text-sm text-gray-400">Create your first producer tenant to get started.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium">Company</th>
-                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Users</th>
-                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Projects</th>
-                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Plan</th>
-                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Valid Until</th>
-                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Status</th>
-                        <th className="text-right py-3 px-4 text-xs text-slate-500 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tenants.map(t => <TenantRow key={t.id} tenant={t} onRefresh={refetch} />)}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
-          {/* ── Categories Tab ── */}
-          <TabsContent value="categories">
-            <Card className="p-5">
-              <div className="mb-5">
-                <h2 className="text-base font-semibold text-slate-900">Global Expense Categories</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Manage platform-wide categories and subcategories. These appear in the expense entry form for all producers alongside their own company-specific categories.
-                </p>
-              </div>
-              <GlobalCategoryManager />
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Global Expense Categories */}
+        <Card className="p-5">
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-base font-semibold text-slate-900">Global Expense Categories</h2>
+            </div>
+            <p className="text-sm text-slate-500">
+              Manage platform-wide categories and subcategories. These appear in the expense entry form for all producers alongside their own company-specific categories.
+            </p>
+          </div>
+          <GlobalCategoryManager />
+        </Card>
 
         {/* Permissions reference */}
         <Card className="p-5">
