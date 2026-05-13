@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseStorage } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
@@ -76,11 +76,11 @@ export function useDailyExpenses(projectId: string | null) {
 
   const uploadBill = async (expenseId: string, file: File) => {
     const path = `bills/${expenseId}/${file.name}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseStorage.storage
       .from('documents')
       .upload(path, file, { upsert: true });
     if (uploadError) return { error: uploadError.message, url: null };
-    const { data } = supabase.storage.from('documents').getPublicUrl(path);
+    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(path);
     const { error: updateError } = await (supabase as any)
       .from('daily_expenses')
       .update({ bill_url: data.publicUrl })
