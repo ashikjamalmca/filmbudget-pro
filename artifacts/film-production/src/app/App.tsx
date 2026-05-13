@@ -7,8 +7,7 @@ import { DashboardLayout } from './components/DashboardLayout';
 import { DashboardOverview } from './components/DashboardOverview';
 import { DailyExpenseEntry } from './components/DailyExpenseEntry';
 import { DailyExpenseComparison } from './components/DailyExpenseComparison';
-import { ArtistsTechnicians } from './components/ArtistsTechnicians';
-import { SongBGM } from './components/SongBGM';
+import { RemunerationManagement } from './components/RemunerationManagement';
 import { Reports } from './components/Reports';
 import { DocumentManagement } from './components/DocumentManagement';
 import { UserManagement } from './components/UserManagement';
@@ -117,9 +116,10 @@ function AppInner() {
       case 'dashboard': return <DashboardOverview projectId={currentProjectId} />;
       case 'daily-expenses': return <DailyExpenseEntry projectId={currentProjectId} />;
       case 'expense-comparison': return <DailyExpenseComparison projectId={currentProjectId} />;
+      case 'remuneration':
       case 'artists':
-      case 'technicians': return <ArtistsTechnicians projectId={currentProjectId} activeTab={currentPage === 'technicians' ? 'technicians' : 'artists'} />;
-      case 'song-bgm': return <SongBGM projectId={currentProjectId} />;
+      case 'technicians':
+      case 'song-bgm': return <RemunerationManagement projectId={currentProjectId} />;
       case 'reports': return <Reports projectId={currentProjectId} />;
       case 'documents': return <DocumentManagement projectId={currentProjectId} />;
       case 'users': return <UserManagement />;

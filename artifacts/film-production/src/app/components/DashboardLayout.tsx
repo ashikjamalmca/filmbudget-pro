@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, Receipt, BarChart3, Users, Wrench, Music,
+  LayoutDashboard, Receipt, BarChart3, Users,
   FileText, FolderOpen, Settings, ChevronLeft, ChevronRight,
-  ChevronDown, ChevronUp, LogOut, User, DollarSign, Menu, Film,
+  LogOut, User, DollarSign, Menu, Film,
   AlertTriangle, Building2,
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -24,9 +24,6 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, currentPage, onNavigate, onLogout, projectId }: DashboardLayoutProps) {
   const { profile, tenant, subscription, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [remunerationExpanded, setRemunerationExpanded] = useState(
-    ['artists', 'technicians', 'song-bgm'].includes(currentPage)
-  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isProducer = profile?.role === 'producer';
@@ -35,16 +32,11 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'daily-expenses', label: 'Daily Expenses', icon: Receipt },
     { id: 'expense-comparison', label: 'Budget Comparison', icon: BarChart3 },
+    { id: 'remuneration', label: 'Remuneration', icon: DollarSign },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'documents', label: 'Documents', icon: FolderOpen },
     ...(isProducer ? [{ id: 'users', label: 'Team Management', icon: Users }] : []),
     ...(isProducer ? [{ id: 'settings', label: 'Settings', icon: Settings }] : []),
-  ];
-
-  const remunerationItems = [
-    { id: 'artists', label: 'Artists', icon: Users },
-    { id: 'technicians', label: 'Technicians', icon: Wrench },
-    { id: 'song-bgm', label: 'Song & BGM', icon: Music },
   ];
 
   const displayName = profile?.full_name ?? 'User';
@@ -94,46 +86,6 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
           );
         })}
 
-        <div>
-          <button
-            onClick={() => setRemunerationExpanded(!remunerationExpanded)}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
-              ['artists', 'technicians', 'song-bgm'].includes(currentPage)
-                ? 'bg-white/20 text-white'
-                : 'text-white/70 hover:bg-white/10 hover:text-white'
-            }`}
-            title={collapsed ? 'Remuneration' : undefined}
-          >
-            <DollarSign className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">Remuneration</span>
-                {remunerationExpanded ? <ChevronUp className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
-              </>
-            )}
-          </button>
-
-          {!collapsed && remunerationExpanded && (
-            <div className="ml-4 mt-1 space-y-1">
-              {remunerationItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentPage === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => { onNavigate(item.id); setMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
-                      isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </nav>
 
       <div className="p-2 border-t border-white/10">

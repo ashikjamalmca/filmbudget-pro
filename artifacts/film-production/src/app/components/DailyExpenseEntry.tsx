@@ -9,12 +9,13 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe, User } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe, User, DollarSign, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
 import { useProfiles } from '../hooks/useProfiles';
 import { useAuth } from '../context/AuthContext';
+import { useRemuneration } from '../hooks/useRemuneration';
 
 interface ExpenseRow {
   id: string;
@@ -33,12 +34,15 @@ export function DailyExpenseEntry({ projectId }: Props) {
   const { withSubs, subsFor, loading: catLoading } = useExpenseCategories();
   const { profile } = useAuth();
   const { profiles, loading: usersLoading } = useProfiles();
+  const { entries: remunerationEntries, addPayment: addRemunerationPayment } = useRemuneration(projectId);
 
   const [date, setDate] = useState<Date>(new Date());
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [description, setDescription] = useState('');
+  const [isRemunerationPayment, setIsRemunerationPayment] = useState(false);
+  const [linkedRemunerationId, setLinkedRemunerationId] = useState('');
 
   // Default paidBy to the currently logged-in user's name once profile loads
   useEffect(() => {
@@ -71,7 +75,11 @@ export function DailyExpenseEntry({ projectId }: Props) {
 
   const handleSave = async () => {
     if (!categoryId || rows.some(r => !r.accountHead)) {
-      setError('Please select a category and fill in all account heads.');
+      setError('Please select a category and fill in all item/service descriptions.');
+      return;
+    }
+    if (isRemunerationPayment && !linkedRemunerationId) {
+      setError('Please select a remuneration record to link, or uncheck the remuneration option.');
       return;
     }
     setSaving(true);
@@ -88,13 +96,29 @@ export function DailyExpenseEntry({ projectId }: Props) {
       category_id: categoryId || null,
       subcategory_id: subcategoryId || null,
     })));
+    if (err) { setSaving(false); setError(err); return; }
+
+    // If this is a remuneration payment, record it in the payment history
+    if (isRemunerationPayment && linkedRemunerationId) {
+      const totalAmount = calculateTotal();
+      await addRemunerationPayment(
+        linkedRemunerationId,
+        totalAmount,
+        format(date, 'yyyy-MM-dd'),
+        paidBy || null,
+        description || 'Paid via Daily Expenses',
+        null,
+      );
+    }
+
     setSaving(false);
-    if (err) { setError(err); return; }
     setRows([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]);
     setCategoryId('');
     setSubcategoryId('');
     setPaidBy('');
     setDescription('');
+    setIsRemunerationPayment(false);
+    setLinkedRemunerationId('');
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -105,6 +129,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setSubcategoryId('');
     setPaidBy('');
     setDescription('');
+    setIsRemunerationPayment(false);
+    setLinkedRemunerationId('');
     setError(null);
   };
 
@@ -240,7 +266,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
             </div>
 
             {/* Row 3 — Description */}
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-4">
               <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Textarea
                 placeholder="Notes, transaction context, or any relevant details..."
@@ -249,6 +275,58 @@ export function DailyExpenseEntry({ projectId }: Props) {
                 className="resize-none"
                 rows={2}
               />
+            </div>
+
+            {/* Row 4 — Remuneration linking */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => { setIsRemunerationPayment(v => !v); setLinkedRemunerationId(''); }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                  isRemunerationPayment
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                    : 'border-gray-200 text-gray-500 hover:border-indigo-200 hover:text-indigo-600'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span>
+                  {isRemunerationPayment ? 'Linked as Remuneration Payment' : 'Link as Remuneration Payment'}
+                </span>
+                <Link2 className="w-3.5 h-3.5 ml-1 opacity-60" />
+              </button>
+
+              {isRemunerationPayment && (
+                <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100 space-y-2">
+                  <Label className="text-xs text-indigo-700">Select Remuneration Record</Label>
+                  {remunerationEntries.length === 0 ? (
+                    <p className="text-xs text-indigo-500">
+                      No remuneration entries found for this project. Add them first in the Remuneration module.
+                    </p>
+                  ) : (
+                    <Select value={linkedRemunerationId} onValueChange={setLinkedRemunerationId}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select person / record" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {remunerationEntries.map(e => (
+                          <SelectItem key={e.id} value={e.id}>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium">{e.person_name}</span>
+                              <span className="text-gray-400 text-xs">· {e.department}</span>
+                              <span className="text-amber-600 text-xs ml-1">
+                                Balance: ₹{e.balance_amount.toLocaleString('en-IN')}
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <p className="text-xs text-indigo-500">
+                    The total expense amount will be recorded as a payment against the selected remuneration record.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Expense detail rows */}

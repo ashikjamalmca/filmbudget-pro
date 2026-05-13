@@ -103,12 +103,52 @@ export interface Database {
           description: string | null;
           category_id: string | null;
           subcategory_id: string | null;
+          remuneration_entry_id: string | null;
           added_by: string;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<Database['public']['Tables']['daily_expenses']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['daily_expenses']['Insert']>;
+      };
+      remuneration_entries: {
+        Row: {
+          id: string;
+          tenant_id: string | null;
+          project_id: string;
+          department: string;
+          role: string;
+          person_name: string;
+          item_service: string | null;
+          agreed_amount: number;
+          paid_amount: number;
+          balance_amount: number;
+          status: PaymentStatus;
+          paid_by: string | null;
+          payment_date: string | null;
+          remarks: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['remuneration_entries']['Row'], 'id' | 'balance_amount' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['remuneration_entries']['Insert']>;
+      };
+      remuneration_payments: {
+        Row: {
+          id: string;
+          remuneration_id: string;
+          tenant_id: string | null;
+          amount: number;
+          payment_date: string;
+          paid_by: string | null;
+          remarks: string | null;
+          expense_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['remuneration_payments']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['remuneration_payments']['Insert']>;
       };
       artists: {
         Row: {
