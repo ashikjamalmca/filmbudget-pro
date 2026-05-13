@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseStorage } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
@@ -39,7 +39,7 @@ export function useDocuments(projectId: string | null) {
       ext === 'xlsx' ? 'excel' : 'other';
 
     const path = `${projectId}/${department}/${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
+    const { error: uploadError } = await supabaseStorage.storage.from('documents').upload(path, file);
     if (uploadError) return { error: uploadError.message };
 
     const fileSizeStr = file.size > 1024 * 1024
@@ -63,12 +63,12 @@ export function useDocuments(projectId: string | null) {
   };
 
   const getDownloadUrl = (storagePath: string) => {
-    const { data } = supabase.storage.from('documents').getPublicUrl(storagePath);
+    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(storagePath);
     return data.publicUrl;
   };
 
   const deleteDocument = async (id: string, storagePath: string) => {
-    await supabase.storage.from('documents').remove([storagePath]);
+    await supabaseStorage.storage.from('documents').remove([storagePath]);
     const { error } = await (supabase as any).from('documents').delete().eq('id', id);
     if (error) return { error: error.message };
     await fetchDocuments();
