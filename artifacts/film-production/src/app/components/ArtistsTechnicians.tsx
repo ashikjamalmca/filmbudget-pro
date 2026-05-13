@@ -17,7 +17,7 @@ interface Props {
 }
 
 function PersonTable({ projectId, type, title }: { projectId: string | null; type: 'artist' | 'technician'; title: string }) {
-  const { people, loading, addPerson, updatePayment, deletePerson } = useArtists(projectId, type);
+  const { people, loading, addPerson, updatePayment, deletePerson, getContractUrl } = useArtists(projectId, type);
   const [isOpen, setIsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', role: '', budget: '', paid: '0', notes: '' });
@@ -113,9 +113,10 @@ function PersonTable({ projectId, type, title }: { projectId: string | null; typ
                   <td className="py-3 px-4">
                     <div className="flex justify-center gap-2">
                       {p.contract_url && (
-                        <a href={p.contract_url} target="_blank" rel="noreferrer">
-                          <Button variant="outline" size="sm"><FileText className="w-4 h-4" /></Button>
-                        </a>
+                        <Button variant="outline" size="sm" onClick={async () => {
+                          const url = await getContractUrl(p.contract_url!);
+                          if (url) window.open(url, '_blank', 'noreferrer');
+                        }}><FileText className="w-4 h-4" /></Button>
                       )}
                       <Button variant="outline" size="sm" onClick={() => deletePerson(p.id)}>
                         <Trash2 className="w-4 h-4 text-red-500" />
