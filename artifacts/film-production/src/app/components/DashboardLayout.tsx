@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Users,
   FileText, FolderOpen, Settings, ChevronLeft, ChevronRight,
   LogOut, User, DollarSign, Menu, Film,
-  AlertTriangle, Building2, Wallet,
+  AlertTriangle, Building2, Wallet, History,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -31,7 +31,8 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'budget', label: 'Budget', icon: Wallet },
-    { id: 'daily-expenses', label: 'Daily Expenses', icon: Receipt },
+    { id: 'daily-expenses', label: 'Daily Expense Entry', icon: Receipt },
+    { id: 'expense-history', label: 'Expense History', icon: History },
     { id: 'expense-comparison', label: 'Budget Comparison', icon: BarChart3 },
     { id: 'remuneration', label: 'Remuneration', icon: DollarSign },
     { id: 'reports', label: 'Reports', icon: FileText },

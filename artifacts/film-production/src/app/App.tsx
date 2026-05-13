@@ -9,6 +9,7 @@ import { DailyExpenseEntry } from './components/DailyExpenseEntry';
 import { DailyExpenseComparison } from './components/DailyExpenseComparison';
 import { RemunerationManagement } from './components/RemunerationManagement';
 import { BudgetManagement } from './components/BudgetManagement';
+import { ExpenseHistory } from './components/ExpenseHistory';
 import { Reports } from './components/Reports';
 import { DocumentManagement } from './components/DocumentManagement';
 import { UserManagement } from './components/UserManagement';
@@ -117,6 +118,7 @@ function AppInner() {
       case 'dashboard': return <DashboardOverview projectId={currentProjectId} />;
       case 'budget': return <BudgetManagement projectId={currentProjectId} />;
       case 'daily-expenses': return <DailyExpenseEntry projectId={currentProjectId} />;
+      case 'expense-history': return <ExpenseHistory projectId={currentProjectId} />;
       case 'expense-comparison': return <DailyExpenseComparison projectId={currentProjectId} />;
       case 'remuneration':
       case 'artists':
