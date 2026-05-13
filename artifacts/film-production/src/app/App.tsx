@@ -15,6 +15,7 @@ import { DocumentManagement } from './components/DocumentManagement';
 import { UserManagement } from './components/UserManagement';
 import { ProducerSettings } from './components/ProducerSettings';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Shield, AlertTriangle, Loader2 } from 'lucide-react';
 
 type AppState = 'login' | 'project-selection' | 'dashboard';
@@ -152,6 +153,7 @@ export default function App() {
     <AuthProvider>
       <ProjectProvider>
         <AppInner />
+        <PWAInstallPrompt />
       </ProjectProvider>
     </AuthProvider>
   );
