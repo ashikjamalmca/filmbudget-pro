@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseStorage } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
@@ -66,11 +66,11 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
 
   const uploadContract = async (personId: string, file: File) => {
     const path = `contracts/${personId}/${file.name}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseStorage.storage
       .from('documents')
       .upload(path, file, { upsert: true });
     if (uploadError) return { error: uploadError.message };
-    const { data } = supabase.storage.from('documents').getPublicUrl(path);
+    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(path);
     await (supabase as any).from('artists').update({ contract_url: data.publicUrl }).eq('id', personId);
     await fetchPeople();
     return { error: null };
