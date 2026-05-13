@@ -74,6 +74,19 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['projects']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['projects']['Insert']>;
       };
+      expense_categories: {
+        Row: {
+          id: string;
+          name: string;
+          tenant_id: string | null;
+          parent_id: string | null;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['expense_categories']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['expense_categories']['Insert']>;
+      };
       daily_expenses: {
         Row: {
           id: string;
@@ -86,6 +99,10 @@ export interface Database {
           nos: number;
           total: number;
           bill_url: string | null;
+          paid_by: string | null;
+          description: string | null;
+          category_id: string | null;
+          subcategory_id: string | null;
           added_by: string;
           created_at: string;
           updated_at: string;

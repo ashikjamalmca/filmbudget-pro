@@ -33,16 +33,29 @@ export function useDailyExpenses(projectId: string | null) {
     amount: number;
     nos: number;
     bill_url: string | null;
+    paid_by?: string | null;
+    description?: string | null;
+    category_id?: string | null;
+    subcategory_id?: string | null;
   }>) => {
     if (!projectId) return { error: 'No project selected' };
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
     const inserts = rows.map(r => ({
-      ...r,
       project_id: projectId,
       tenant_id: tenantId,
       added_by: user.id,
+      expense_date: r.expense_date,
+      department: r.department,
+      account_head: r.account_head,
+      amount: r.amount,
+      nos: r.nos,
       total: r.amount * r.nos,
+      bill_url: r.bill_url ?? null,
+      paid_by: r.paid_by ?? null,
+      description: r.description ?? null,
+      category_id: r.category_id ?? null,
+      subcategory_id: r.subcategory_id ?? null,
     }));
     const { error } = await (supabase as any).from('daily_expenses').insert(inserts);
     if (error) return { error: error.message };

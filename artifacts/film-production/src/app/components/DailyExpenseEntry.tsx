@@ -3,13 +3,16 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { CalendarIcon, Upload, Plus, Trash2, Loader2, CheckCircle } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
+import { useExpenseCategories } from '../hooks/useExpenseCategories';
 
 interface ExpenseRow {
   id: string;
@@ -23,20 +26,15 @@ interface Props {
   projectId: string | null;
 }
 
-const departments = [
-  'Batta (Daily Allowance)',
-  'Lodging',
-  'Mess (Meals)',
-  'Equipment Rental',
-  'Vehicles',
-  'Location Fee',
-  'Others',
-];
-
 export function DailyExpenseEntry({ projectId }: Props) {
   const { expenses, loading, addExpenses, deleteExpense } = useDailyExpenses(projectId);
+  const { withSubs, subsFor, loading: catLoading } = useExpenseCategories();
+
   const [date, setDate] = useState<Date>(new Date());
-  const [department, setDepartment] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subcategoryId, setSubcategoryId] = useState('');
+  const [paidBy, setPaidBy] = useState('');
+  const [description, setDescription] = useState('');
   const [rows, setRows] = useState<ExpenseRow[]>([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -51,27 +49,59 @@ export function DailyExpenseEntry({ projectId }: Props) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
 
+  const selectedCategory = withSubs.find(c => c.id === categoryId);
+  const availableSubcategories = categoryId ? subsFor(categoryId) : [];
+
+  const handleCategoryChange = (val: string) => {
+    setCategoryId(val);
+    setSubcategoryId('');
+  };
+
   const handleSave = async () => {
-    if (!department || rows.some(r => !r.accountHead)) {
-      setError('Please fill in department and all account heads.');
+    if (!categoryId || rows.some(r => !r.accountHead)) {
+      setError('Please select a category and fill in all account heads.');
       return;
     }
     setSaving(true);
     setError(null);
     const { error: err } = await addExpenses(rows.map(r => ({
       expense_date: format(date, 'yyyy-MM-dd'),
-      department,
+      department: selectedCategory?.name ?? '',
       account_head: r.accountHead,
       amount: r.amount,
       nos: r.nos,
       bill_url: null,
+      paid_by: paidBy || null,
+      description: description || null,
+      category_id: categoryId || null,
+      subcategory_id: subcategoryId || null,
     })));
     setSaving(false);
     if (err) { setError(err); return; }
     setRows([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]);
-    setDepartment('');
+    setCategoryId('');
+    setSubcategoryId('');
+    setPaidBy('');
+    setDescription('');
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleCancel = () => {
+    setRows([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]);
+    setCategoryId('');
+    setSubcategoryId('');
+    setPaidBy('');
+    setDescription('');
+    setError(null);
+  };
+
+  const getCategoryLabel = (exp: typeof expenses[0]) => {
+    const cat = withSubs.find(c => c.id === exp.category_id);
+    const sub = cat?.subcategories.find(s => s.id === exp.subcategory_id);
+    if (cat && sub) return `${cat.name} › ${sub.name}`;
+    if (cat) return cat.name;
+    return exp.department || '—';
   };
 
   return (
@@ -82,18 +112,20 @@ export function DailyExpenseEntry({ projectId }: Props) {
           <TabsTrigger value="history">Expense History</TabsTrigger>
         </TabsList>
 
+        {/* ── Entry Tab ── */}
         <TabsContent value="entry" className="space-y-4 md:space-y-6">
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl mb-4 md:mb-6">Add Daily Expenses</h2>
 
-            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+            {error && <p className="text-red-600 text-sm mb-4 bg-red-50 p-3 rounded">{error}</p>}
             {saved && (
-              <div className="flex items-center gap-2 text-green-600 text-sm mb-4">
+              <div className="flex items-center gap-2 text-green-600 text-sm mb-4 bg-green-50 p-3 rounded">
                 <CheckCircle className="w-4 h-4" /> Expenses saved successfully.
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+            {/* Row 1 — Date + Paid By */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Date</Label>
                 <Popover>
@@ -110,20 +142,89 @@ export function DailyExpenseEntry({ projectId }: Props) {
               </div>
 
               <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={department} onValueChange={setDepartment}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                <Label>Paid By</Label>
+                <Input
+                  placeholder="e.g. Petty Cash, Accounts, John Doe"
+                  value={paidBy}
+                  onChange={e => setPaidBy(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Row 2 — Category + Subcategory */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                {catLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading categories...
+                  </div>
+                ) : (
+                  <Select value={categoryId} onValueChange={handleCategoryChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {withSubs.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <span className="flex items-center gap-2">
+                            {cat.tenant_id === null
+                              ? <Globe className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                              : <Tag className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                            }
+                            {cat.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-gray-400 flex items-center gap-3">
+                  <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-indigo-400" /> Platform default</span>
+                  <span className="flex items-center gap-1"><Tag className="w-3 h-3 text-blue-400" /> Company-specific</span>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Subcategory <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Select
+                  value={subcategoryId}
+                  onValueChange={setSubcategoryId}
+                  disabled={!categoryId || availableSubcategories.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !categoryId ? 'Select a category first' :
+                      availableSubcategories.length === 0 ? 'No subcategories available' :
+                      'Select subcategory'
+                    } />
+                  </SelectTrigger>
                   <SelectContent>
-                    {departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    {availableSubcategories.map(sub => (
+                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
+            {/* Row 3 — Description */}
+            <div className="space-y-2 mb-6">
+              <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Textarea
+                placeholder="Notes, transaction context, or any relevant details..."
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                className="resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Expense detail rows */}
             <div className="space-y-4">
               <div className="hidden md:grid grid-cols-12 gap-4 text-sm text-gray-600 px-2">
                 <div className="col-span-4">Account Head</div>
-                <div className="col-span-2">Amount</div>
+                <div className="col-span-2">Amount (₹)</div>
                 <div className="col-span-2">Nos</div>
                 <div className="col-span-2">Total</div>
                 <div className="col-span-2">Actions</div>
@@ -131,9 +232,10 @@ export function DailyExpenseEntry({ projectId }: Props) {
 
               {rows.map(row => (
                 <div key={row.id}>
+                  {/* Desktop */}
                   <div className="hidden md:grid grid-cols-12 gap-4 items-center">
                     <div className="col-span-4">
-                      <Input placeholder="e.g., Location fee, Meals" value={row.accountHead}
+                      <Input placeholder="e.g. Location fee, Meals" value={row.accountHead}
                         onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
                     </div>
                     <div className="col-span-2">
@@ -145,9 +247,9 @@ export function DailyExpenseEntry({ projectId }: Props) {
                         onChange={e => updateRow(row.id, 'nos', parseInt(e.target.value) || 1)} />
                     </div>
                     <div className="col-span-2 px-2">
-                      <span className="text-gray-900">{formatCurrency(row.amount * row.nos)}</span>
+                      <span className="text-gray-900 font-medium">{formatCurrency(row.amount * row.nos)}</span>
                     </div>
-                    <div className="col-span-2 flex gap-2">
+                    <div className="col-span-2">
                       {rows.length > 1 && (
                         <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
                           <Trash2 className="w-4 h-4 text-red-500" />
@@ -156,15 +258,16 @@ export function DailyExpenseEntry({ projectId }: Props) {
                     </div>
                   </div>
 
+                  {/* Mobile */}
                   <Card className="md:hidden p-4 space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs">Account Head</Label>
-                      <Input placeholder="e.g., Location fee" value={row.accountHead}
+                      <Input placeholder="e.g. Location fee" value={row.accountHead}
                         onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label className="text-xs">Amount</Label>
+                        <Label className="text-xs">Amount (₹)</Label>
                         <Input type="number" placeholder="0" value={row.amount || ''}
                           onChange={e => updateRow(row.id, 'amount', parseFloat(e.target.value) || 0)} />
                       </div>
@@ -176,7 +279,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t">
                       <span className="text-sm text-gray-600">Total:</span>
-                      <span className="text-base">{formatCurrency(row.amount * row.nos)}</span>
+                      <span className="text-base font-medium">{formatCurrency(row.amount * row.nos)}</span>
                     </div>
                     {rows.length > 1 && (
                       <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
@@ -193,15 +296,12 @@ export function DailyExpenseEntry({ projectId }: Props) {
                 </Button>
                 <div className="text-left sm:text-right w-full sm:w-auto">
                   <p className="text-sm text-gray-600 mb-1">Daily Total</p>
-                  <p className="text-xl md:text-2xl text-[#1E3A8A]">{formatCurrency(calculateTotal())}</p>
+                  <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(calculateTotal())}</p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-                <Button variant="outline" className="w-full sm:w-auto"
-                  onClick={() => { setRows([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]); setDepartment(''); }}>
-                  Cancel
-                </Button>
+                <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
                 <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
                   {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Save Day Summary'}
                 </Button>
@@ -210,6 +310,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
           </Card>
         </TabsContent>
 
+        {/* ── History Tab ── */}
         <TabsContent value="history">
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl mb-4 md:mb-6">Expense History</h2>
@@ -219,39 +320,52 @@ export function DailyExpenseEntry({ projectId }: Props) {
               <p className="text-gray-500 text-sm text-center py-8">No expenses recorded yet.</p>
             ) : (
               <div className="overflow-x-auto -mx-4 md:mx-0">
-                <table className="w-full min-w-[700px]">
+                <table className="w-full min-w-[800px]">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-xs md:text-sm text-gray-600">Date</th>
-                      <th className="text-left py-3 px-4 text-xs md:text-sm text-gray-600">Department</th>
-                      <th className="text-left py-3 px-4 text-xs md:text-sm text-gray-600">Account Head</th>
-                      <th className="text-right py-3 px-4 text-xs md:text-sm text-gray-600">Amount</th>
-                      <th className="text-right py-3 px-4 text-xs md:text-sm text-gray-600">Nos</th>
-                      <th className="text-right py-3 px-4 text-xs md:text-sm text-gray-600">Total</th>
-                      <th className="text-center py-3 px-4 text-xs md:text-sm text-gray-600">Actions</th>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Date</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Category</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Account Head</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Paid By</th>
+                      <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Amount</th>
+                      <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Nos</th>
+                      <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Total</th>
+                      <th className="text-center py-3 px-4 text-xs text-gray-500 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {expenses.map(item => (
                       <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-xs md:text-sm whitespace-nowrap">{item.expense_date}</td>
-                        <td className="py-3 px-4 text-xs md:text-sm">{item.department}</td>
-                        <td className="py-3 px-4 text-xs md:text-sm">{item.account_head}</td>
-                        <td className="py-3 px-4 text-xs md:text-sm text-right">{formatCurrency(item.amount)}</td>
-                        <td className="py-3 px-4 text-xs md:text-sm text-right">{item.nos}</td>
-                        <td className="py-3 px-4 text-xs md:text-sm text-right whitespace-nowrap">{formatCurrency(item.total)}</td>
+                        <td className="py-3 px-4 text-xs whitespace-nowrap text-gray-700">{item.expense_date}</td>
+                        <td className="py-3 px-4 text-xs">
+                          <div className="space-y-0.5">
+                            <span className="text-gray-800">{getCategoryLabel(item)}</span>
+                            {item.description && (
+                              <p className="text-gray-400 text-xs truncate max-w-[160px]" title={item.description}>{item.description}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-700">{item.account_head}</td>
+                        <td className="py-3 px-4 text-xs">
+                          {item.paid_by
+                            ? <Badge variant="outline" className="text-xs font-normal">{item.paid_by}</Badge>
+                            : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-right text-gray-700">{formatCurrency(item.amount)}</td>
+                        <td className="py-3 px-4 text-xs text-right text-gray-700">{item.nos}</td>
+                        <td className="py-3 px-4 text-xs text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(item.total)}</td>
                         <td className="py-3 px-4 text-center">
                           <Button variant="outline" size="sm" onClick={() => deleteExpense(item.id)}>
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
                           </Button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-50">
-                      <td colSpan={5} className="py-3 px-4 text-right text-sm">Total:</td>
-                      <td className="py-3 px-4 text-right text-[#1E3A8A]">
+                    <tr className="bg-gray-50 border-t">
+                      <td colSpan={6} className="py-3 px-4 text-right text-sm text-gray-600 font-medium">Grand Total:</td>
+                      <td className="py-3 px-4 text-right text-[#1E3A8A] font-semibold">
                         {formatCurrency(expenses.reduce((s, e) => s + e.total, 0))}
                       </td>
                       <td />

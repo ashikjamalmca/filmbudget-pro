@@ -9,6 +9,7 @@
     "seed-users": "tsx ./src/seed-users.ts",
     "seed-super-admin": "tsx ./src/seed-super-admin.ts",
     "migrate-existing-data": "tsx ./src/migrate-existing-data.ts",
+    "run-migration-003": "echo 'Run supabase/migrations/003_expense_categories.sql in Supabase SQL Editor'",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

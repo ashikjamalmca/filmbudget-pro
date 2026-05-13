@@ -3,15 +3,19 @@ import {
   Building2, Users, FolderOpen, TrendingUp, Plus, Shield,
   LogOut, CheckCircle, XCircle, AlertTriangle, ChevronDown,
   ChevronUp, Loader2, Edit2, Ban, RefreshCw, Film,
+  Globe, Tag, ChevronRight, Trash2, Check, X,
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Badge } from './ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTenants } from '../hooks/useTenants';
 import { useSubscriptions } from '../hooks/useSubscriptions';
+import { useExpenseCategories } from '../hooks/useExpenseCategories';
 import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
@@ -22,6 +26,7 @@ interface SuperAdminDashboardProps {
   onLogout: () => void;
 }
 
+// ── Create Tenant Modal ──────────────────────────────────────────────────────
 function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
   const { createTenant } = useTenants();
   const [open, setOpen] = useState(false);
@@ -50,10 +55,7 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
     }
     setSaving(true);
     setError(null);
-    const { error } = await createTenant({
-      ...form,
-      valid_until: form.valid_until || null,
-    });
+    const { error } = await createTenant({ ...form, valid_until: form.valid_until || null });
     setSaving(false);
     if (error) { setError(error); return; }
     setOpen(false);
@@ -74,7 +76,6 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
         </DialogHeader>
         <div className="space-y-4 py-2">
           {error && <p className="text-red-600 text-sm bg-red-50 p-3 rounded">{error}</p>}
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 col-span-2">
               <Label>Company / Production House Name</Label>
@@ -87,7 +88,6 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
                 onChange={e => setForm({ ...form, slug: e.target.value })} />
             </div>
           </div>
-
           <div className="border-t pt-4">
             <p className="text-sm text-gray-500 mb-3">Producer Account (Tenant Admin)</p>
             <div className="grid grid-cols-2 gap-4">
@@ -103,7 +103,6 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
               </div>
             </div>
           </div>
-
           <div className="border-t pt-4">
             <p className="text-sm text-gray-500 mb-3">Subscription & Limits</p>
             <div className="grid grid-cols-2 gap-4">
@@ -140,17 +139,14 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
               </div>
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Notes (optional)</Label>
             <Input placeholder="Internal notes..." value={form.notes}
               onChange={e => setForm({ ...form, notes: e.target.value })} />
           </div>
-
           <p className="text-xs text-gray-500">
             A password-setup email will be sent to the producer after account creation.
           </p>
-
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSubmit} disabled={saving}>
@@ -163,6 +159,7 @@ function CreateTenantModal({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+// ── Edit Subscription Modal ──────────────────────────────────────────────────
 function EditSubscriptionModal({ tenant, subscription, onUpdated }: {
   tenant: TenantWithStats;
   subscription: Subscription | null;
@@ -183,12 +180,8 @@ function EditSubscriptionModal({ tenant, subscription, onUpdated }: {
 
   const handleSave = async () => {
     if (!subscription) return;
-    setSaving(true);
-    setError(null);
-    const { error } = await updateSubscription(subscription.id, {
-      ...form,
-      valid_until: form.valid_until || null,
-    });
+    setSaving(true); setError(null);
+    const { error } = await updateSubscription(subscription.id, { ...form, valid_until: form.valid_until || null });
     setSaving(false);
     if (error) { setError(error); return; }
     setOpen(false);
@@ -254,6 +247,7 @@ function EditSubscriptionModal({ tenant, subscription, onUpdated }: {
   );
 }
 
+// ── Tenant Row ───────────────────────────────────────────────────────────────
 function TenantRow({ tenant, onRefresh }: { tenant: TenantWithStats; onRefresh: () => void }) {
   const { suspendTenant, activateTenant } = useTenants();
   const [expanded, setExpanded] = useState(false);
@@ -279,10 +273,7 @@ function TenantRow({ tenant, onRefresh }: { tenant: TenantWithStats; onRefresh: 
 
   return (
     <>
-      <tr
-        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <tr className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <td className="py-4 px-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
@@ -379,6 +370,216 @@ function TenantRow({ tenant, onRefresh }: { tenant: TenantWithStats; onRefresh: 
   );
 }
 
+// ── Global Category Manager ──────────────────────────────────────────────────
+function GlobalCategoryManager() {
+  const {
+    globalCategories, loading, refetch,
+    addCategory, updateCategory, deleteCategory, subsFor,
+  } = useExpenseCategories();
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [newCatName, setNewCatName] = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+  const [newSubName, setNewSubName] = useState<Record<string, string>>({});
+  const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggle = (id: string) =>
+    setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    setSaving(true); setError(null);
+    const { error } = await addCategory(newCatName.trim(), null, null);
+    setSaving(false);
+    if (error) { setError(error); return; }
+    setNewCatName(''); setAddingCat(false);
+  };
+
+  const handleAddSub = async (parentId: string) => {
+    const name = (newSubName[parentId] ?? '').trim();
+    if (!name) return;
+    setSaving(true); setError(null);
+    const { error } = await addCategory(name, parentId, null);
+    setSaving(false);
+    if (error) { setError(error); return; }
+    setNewSubName(prev => ({ ...prev, [parentId]: '' }));
+    setAddingSubFor(null);
+  };
+
+  const handleEdit = async (id: string) => {
+    if (!editingName.trim()) return;
+    setSaving(true);
+    await updateCategory(id, editingName.trim());
+    setSaving(false);
+    setEditingId(null); setEditingName('');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Remove this category? It will be hidden from all expense entries platform-wide.')) return;
+    setSaving(true);
+    await deleteCategory(id);
+    setSaving(false);
+  };
+
+  if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>;
+
+  return (
+    <div className="space-y-4">
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded">{error}</div>}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-indigo-500" />
+          <p className="text-sm text-gray-600">
+            These categories are available to <strong>all producers</strong> on the platform by default.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={refetch} className="text-slate-500">
+            <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+          </Button>
+          {!addingCat && (
+            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setAddingCat(true)}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Category
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {addingCat && (
+        <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+          <Input
+            className="flex-1 h-8 text-sm"
+            placeholder="New global category name..."
+            value={newCatName}
+            onChange={e => setNewCatName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+            autoFocus
+          />
+          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white h-8" onClick={handleAddCategory} disabled={saving}>
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          </Button>
+          <Button size="sm" variant="outline" className="h-8" onClick={() => { setAddingCat(false); setNewCatName(''); }}>
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {globalCategories.map(cat => (
+          <div key={cat.id} className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 p-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+              <button className="flex items-center gap-2 flex-1 text-left" onClick={() => toggle(cat.id)}>
+                {cat.subcategories.length > 0
+                  ? expanded.has(cat.id) ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  : <span className="w-4 h-4 flex-shrink-0" />
+                }
+                {editingId === cat.id ? (
+                  <Input
+                    className="h-7 text-sm flex-1"
+                    value={editingName}
+                    onChange={e => setEditingName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleEdit(cat.id); if (e.key === 'Escape') setEditingId(null); }}
+                    autoFocus
+                    onClick={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-slate-800">{cat.name}</span>
+                )}
+                <Badge variant="outline" className="ml-auto text-xs text-gray-400 mr-2">
+                  {cat.subcategories.length} subcategories
+                </Badge>
+              </button>
+              <div className="flex items-center gap-1">
+                {editingId === cat.id ? (
+                  <>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(cat.id)}><Check className="w-3.5 h-3.5 text-green-600" /></Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingId(null)}><X className="w-3.5 h-3.5 text-gray-400" /></Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingId(cat.id); setEditingName(cat.name); }}>
+                      <Edit2 className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-600" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDelete(cat.id)}>
+                      <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {expanded.has(cat.id) && (
+              <div className="px-8 pb-2 pt-1 space-y-1 bg-white">
+                {cat.subcategories.map(sub => (
+                  <div key={sub.id} className="flex items-center gap-2 py-1.5">
+                    {editingId === sub.id ? (
+                      <>
+                        <Input className="h-7 text-sm flex-1" value={editingName}
+                          onChange={e => setEditingName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleEdit(sub.id); if (e.key === 'Escape') setEditingId(null); }}
+                          autoFocus
+                        />
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEdit(sub.id)}><Check className="w-3.5 h-3.5 text-green-600" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingId(null)}><X className="w-3.5 h-3.5 text-gray-400" /></Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 flex-1">{sub.name}</span>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingId(sub.id); setEditingName(sub.name); }}>
+                          <Edit2 className="w-3 h-3 text-gray-400 hover:text-indigo-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDelete(sub.id)}>
+                          <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ))}
+
+                {addingSubFor === cat.id ? (
+                  <div className="flex items-center gap-2 py-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 flex-shrink-0" />
+                    <Input className="h-7 text-sm flex-1" placeholder="Subcategory name..."
+                      value={newSubName[cat.id] ?? ''}
+                      onChange={e => setNewSubName(prev => ({ ...prev, [cat.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddSub(cat.id); if (e.key === 'Escape') setAddingSubFor(null); }}
+                      autoFocus
+                    />
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleAddSub(cat.id)}><Check className="w-3.5 h-3.5 text-green-600" /></Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setAddingSubFor(null)}><X className="w-3.5 h-3.5 text-gray-400" /></Button>
+                  </div>
+                ) : (
+                  <button
+                    className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 mt-1 py-1"
+                    onClick={() => { setAddingSubFor(cat.id); setExpanded(prev => new Set([...prev, cat.id])); }}
+                  >
+                    <Plus className="w-3 h-3" /> Add subcategory
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {globalCategories.length === 0 && !addingCat && (
+        <div className="text-center py-10 text-gray-400">
+          <Globe className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+          <p className="text-sm">No global categories yet.</p>
+          <p className="text-xs mt-1">Add categories to make them available to all producers.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main SuperAdminDashboard ─────────────────────────────────────────────────
 export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
   const { profile, signOut } = useAuth();
   const { tenants, loading, refetch } = useTenants();
@@ -411,27 +612,13 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
             <Shield className="w-4 h-4 text-indigo-400" />
             <span className="text-sm text-slate-300">{profile?.full_name ?? 'Admin'}</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
-            onClick={handleLogout}
-          >
+          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white hover:bg-slate-700" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-1" /> Sign Out
           </Button>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Page title */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Platform Overview</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage all producer tenants and subscriptions</p>
-          </div>
-          <CreateTenantModal onCreated={refetch} />
-        </div>
-
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-5">
@@ -480,47 +667,73 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
           </Card>
         </div>
 
-        {/* Tenant table */}
-        <Card className="overflow-hidden">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-900">All Tenants</h2>
-            <Button variant="ghost" size="sm" onClick={refetch} className="text-slate-500">
-              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
-            </Button>
-          </div>
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-            </div>
-          ) : tenants.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No tenants yet.</p>
-              <p className="text-sm text-gray-400">Create your first producer tenant to get started.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium">Company</th>
-                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Users</th>
-                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Projects</th>
-                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Plan</th>
-                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Valid Until</th>
-                    <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Status</th>
-                    <th className="text-right py-3 px-4 text-xs text-slate-500 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map(t => (
-                    <TenantRow key={t.id} tenant={t} onRefresh={refetch} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+        {/* Main tabbed content */}
+        <Tabs defaultValue="tenants">
+          <TabsList className="mb-2">
+            <TabsTrigger value="tenants" className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5" /> Tenants
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Expense Categories
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Tenants Tab ── */}
+          <TabsContent value="tenants">
+            <Card className="overflow-hidden">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-slate-900">All Tenants</h2>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={refetch} className="text-slate-500">
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" /> Refresh
+                  </Button>
+                  <CreateTenantModal onCreated={refetch} />
+                </div>
+              </div>
+              {loading ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+              ) : tenants.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No tenants yet.</p>
+                  <p className="text-sm text-gray-400">Create your first producer tenant to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="text-left py-3 px-4 text-xs text-slate-500 font-medium">Company</th>
+                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Users</th>
+                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Projects</th>
+                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Plan</th>
+                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Valid Until</th>
+                        <th className="text-center py-3 px-4 text-xs text-slate-500 font-medium">Status</th>
+                        <th className="text-right py-3 px-4 text-xs text-slate-500 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tenants.map(t => <TenantRow key={t.id} tenant={t} onRefresh={refetch} />)}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* ── Categories Tab ── */}
+          <TabsContent value="categories">
+            <Card className="p-5">
+              <div className="mb-5">
+                <h2 className="text-base font-semibold text-slate-900">Global Expense Categories</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Manage platform-wide categories and subcategories. These appear in the expense entry form for all producers alongside their own company-specific categories.
+                </p>
+              </div>
+              <GlobalCategoryManager />
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Permissions reference */}
         <Card className="p-5">
@@ -535,7 +748,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                 <li>• Create &amp; manage all tenants</li>
                 <li>• Configure subscription limits</li>
                 <li>• Suspend / activate tenants</li>
-                <li>• View platform-wide analytics</li>
+                <li>• Manage global expense categories</li>
               </ul>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
@@ -547,7 +760,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                 <li>• Full access within their workspace</li>
                 <li>• Create &amp; manage projects</li>
                 <li>• Invite &amp; manage sub-users</li>
-                <li>• Manage budgets &amp; reports</li>
+                <li>• Manage company-specific categories</li>
               </ul>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">

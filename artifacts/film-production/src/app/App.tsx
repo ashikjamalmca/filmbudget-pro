@@ -12,6 +12,7 @@ import { SongBGM } from './components/SongBGM';
 import { Reports } from './components/Reports';
 import { DocumentManagement } from './components/DocumentManagement';
 import { UserManagement } from './components/UserManagement';
+import { ProducerSettings } from './components/ProducerSettings';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Shield, AlertTriangle, Loader2 } from 'lucide-react';
 
@@ -122,6 +123,7 @@ function AppInner() {
       case 'reports': return <Reports projectId={currentProjectId} />;
       case 'documents': return <DocumentManagement projectId={currentProjectId} />;
       case 'users': return <UserManagement />;
+      case 'settings': return <ProducerSettings />;
       default: return <DashboardOverview projectId={currentProjectId} />;
     }
   };

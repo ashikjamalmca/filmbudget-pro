@@ -37,7 +37,8 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
     { id: 'expense-comparison', label: 'Budget Comparison', icon: BarChart3 },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'documents', label: 'Documents', icon: FolderOpen },
-    ...(isProducer ? [{ id: 'users', label: 'Team Management', icon: Settings }] : []),
+    ...(isProducer ? [{ id: 'users', label: 'Team Management', icon: Users }] : []),
+    ...(isProducer ? [{ id: 'settings', label: 'Settings', icon: Settings }] : []),
   ];
 
   const remunerationItems = [
