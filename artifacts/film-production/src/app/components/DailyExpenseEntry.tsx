@@ -183,13 +183,13 @@ export function DailyExpenseEntry({ projectId }: Props) {
               </div>
             )}
 
-            {/* Row 1 — Date + Paid By */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Row 1 — Date */}
+            <div className="mb-4">
               <div className="space-y-2">
                 <Label>Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full md:w-64 justify-start">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(date, 'PPP')}
                     </Button>
@@ -198,34 +198,6 @@ export function DailyExpenseEntry({ projectId }: Props) {
                     <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} />
                   </PopoverContent>
                 </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Paid By</Label>
-                {usersLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
-                  </div>
-                ) : (
-                  <Select value={paidBy} onValueChange={setPaidBy}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profiles.map(p => (
-                        <SelectItem key={p.id} value={p.full_name ?? p.id}>
-                          <span className="flex items-center gap-2">
-                            <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            <span>{p.full_name ?? p.id}</span>
-                            {p.id === profile?.id && (
-                              <span className="text-xs text-indigo-500 ml-1">(you)</span>
-                            )}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
               </div>
             </div>
 
@@ -316,43 +288,6 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   </>
                 )}
               </div>
-            </div>
-
-            {/* Row 3 — Pay Method + Reference No */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Pay Method <span className="text-gray-400 font-normal">(optional)</span></Label>
-                <Select value={payMethod} onValueChange={setPayMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Credit Card', 'Petty Cash'].map(m => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Reference No <span className="text-gray-400 font-normal">(optional)</span></Label>
-                <Input
-                  placeholder="Cheque no., UPI ref, transaction ID..."
-                  value={referenceNo}
-                  onChange={e => setReferenceNo(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Row 4 — Description */}
-            <div className="space-y-2 mb-4">
-              <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
-              <Textarea
-                placeholder="Notes, transaction context, or any relevant details..."
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                className="resize-none"
-                rows={2}
-              />
             </div>
 
             {/* Expense detail rows — simplified for Remuneration, full multi-row otherwise */}
@@ -476,7 +411,73 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                {/* Pay Method + Reference No */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Pay Method <span className="text-gray-400 font-normal">(optional)</span></Label>
+                    <Select value={payMethod} onValueChange={setPayMethod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Credit Card', 'Petty Cash'].map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reference No <span className="text-gray-400 font-normal">(optional)</span></Label>
+                    <Input
+                      placeholder="Cheque no., UPI ref, transaction ID..."
+                      value={referenceNo}
+                      onChange={e => setReferenceNo(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
+                  <Textarea
+                    placeholder="Notes, transaction context, or any relevant details..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="resize-none"
+                    rows={2}
+                  />
+                </div>
+
+                {/* Paid By */}
+                <div className="space-y-2">
+                  <Label>Paid By</Label>
+                  {usersLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
+                    </div>
+                  ) : (
+                    <Select value={paidBy} onValueChange={setPaidBy}>
+                      <SelectTrigger className="md:w-64">
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map(p => (
+                          <SelectItem key={p.id} value={p.full_name ?? p.id}>
+                            <span className="flex items-center gap-2">
+                              <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span>{p.full_name ?? p.id}</span>
+                              {p.id === profile?.id && (
+                                <span className="text-xs text-indigo-500 ml-1">(you)</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
                   <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
                     {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Save Day Summary'}
