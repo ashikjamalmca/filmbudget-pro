@@ -1,0 +1,84 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
+import type { Database } from '../../lib/database.types';
+
+type Artist = Database['public']['Tables']['artists']['Row'];
+type PaymentStatus = Database['public']['Enums']['payment_status'];
+
+export function useArtists(projectId: string | null, type: 'artist' | 'technician') {
+  const [people, setPeople] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPeople = useCallback(async () => {
+    if (!projectId) { setPeople([]); setLoading(false); return; }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('artists')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('type', type)
+      .order('created_at');
+    if (error) setError(error.message);
+    else setPeople((data ?? []) as Artist[]);
+    setLoading(false);
+  }, [projectId, type]);
+
+  useEffect(() => { fetchPeople(); }, [fetchPeople]);
+
+  const addPerson = async (values: {
+    name: string;
+    role: string;
+    budget: number;
+    paid: number;
+    notes: string;
+    contract_url: string | null;
+  }) => {
+    if (!projectId) return { error: 'No project selected' };
+    const balance = values.budget - values.paid;
+    const status: PaymentStatus = values.paid === 0 ? 'pending' : values.paid >= values.budget ? 'complete' : 'partial';
+    const { error } = await (supabase as any).from('artists').insert({
+      ...values,
+      project_id: projectId,
+      type,
+      balance,
+      status,
+    });
+    if (error) return { error: error.message };
+    await fetchPeople();
+    return { error: null };
+  };
+
+  const updatePayment = async (id: string, paid: number, budget: number) => {
+    const balance = budget - paid;
+    const status: PaymentStatus = paid === 0 ? 'pending' : paid >= budget ? 'complete' : 'partial';
+    const { error } = await (supabase as any)
+      .from('artists')
+      .update({ paid, balance, status })
+      .eq('id', id);
+    if (error) return { error: error.message };
+    await fetchPeople();
+    return { error: null };
+  };
+
+  const uploadContract = async (personId: string, file: File) => {
+    const path = `contracts/${personId}/${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(path, file, { upsert: true });
+    if (uploadError) return { error: uploadError.message };
+    const { data } = supabase.storage.from('documents').getPublicUrl(path);
+    await (supabase as any).from('artists').update({ contract_url: data.publicUrl }).eq('id', personId);
+    await fetchPeople();
+    return { error: null };
+  };
+
+  const deletePerson = async (id: string) => {
+    const { error } = await supabase.from('artists').delete().eq('id', id);
+    if (error) return { error: error.message };
+    await fetchPeople();
+    return { error: null };
+  };
+
+  return { people, loading, error, refetch: fetchPeople, addPerson, updatePayment, uploadContract, deletePerson };
+}
