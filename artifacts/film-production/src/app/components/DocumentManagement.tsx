@@ -175,11 +175,16 @@ export function DocumentManagement({ projectId }: Props) {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <a href={getDownloadUrl(doc.storage_path)} target="_blank" rel="noreferrer" className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />Download
-                  </Button>
-                </a>
+                <Button variant="outline" size="sm" className="flex-1" onClick={async () => {
+                  try {
+                    const url = await getDownloadUrl(doc.storage_path);
+                    window.open(url, '_blank', 'noreferrer');
+                  } catch {
+                    alert('Could not generate download link. Please try again.');
+                  }
+                }}>
+                  <Download className="w-4 h-4 mr-2" />Download
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => deleteDocument(doc.id, doc.storage_path)}>
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
