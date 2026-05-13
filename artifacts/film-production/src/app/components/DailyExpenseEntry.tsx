@@ -183,25 +183,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
               </div>
             )}
 
-            {/* Row 1 — Date */}
-            <div className="mb-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full md:w-64 justify-start">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(date, 'PPP')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Row 2 — Category + Subcategory */}
+            {/* Row 1 — Category + Subcategory */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Category</Label>
@@ -411,8 +393,22 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   </div>
                 </div>
 
-                {/* Pay Method + Reference No + Paid By — single row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                {/* Date + Pay Method + Reference No + Paid By — single row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(date, 'PPP')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <div className="space-y-2">
                     <Label>Pay Method <span className="text-gray-400 font-normal">(optional)</span></Label>
                     <Select value={payMethod} onValueChange={setPayMethod}>
