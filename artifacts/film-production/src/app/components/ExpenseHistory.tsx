@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Loader2, Trash2, Receipt, Search, X, SlidersHorizontal } from 'lucide-react';
+import { Loader2, Trash2, Receipt, Search, X, SlidersHorizontal, Paperclip } from 'lucide-react';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
 
@@ -16,7 +16,7 @@ interface Props {
 const PAY_METHODS = ['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Credit Card', 'Petty Cash'];
 
 export function ExpenseHistory({ projectId }: Props) {
-  const { expenses, loading, deleteExpense } = useDailyExpenses(projectId);
+  const { expenses, loading, deleteExpense, getBillUrl } = useDailyExpenses(projectId);
   const { withSubs } = useExpenseCategories();
 
   const [search, setSearch] = useState('');
@@ -311,9 +311,24 @@ export function ExpenseHistory({ projectId }: Props) {
                       {formatCurrency(item.total)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <Button variant="outline" size="sm" onClick={() => deleteExpense(item.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </Button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {(item as any).bill_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title="Download attachment"
+                            onClick={async () => {
+                              const url = await getBillUrl((item as any).bill_url);
+                              if (url) window.open(url, '_blank', 'noreferrer');
+                            }}
+                          >
+                            <Paperclip className="w-3.5 h-3.5 text-[#1E3A8A]" />
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => deleteExpense(item.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
