@@ -160,7 +160,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
       <Card className="p-4 md:p-6">
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <h2 className="text-lg md:text-xl">Add Daily Expenses</h2>
-          <Button variant="outline" size="sm" onClick={addRow}>
+          <Button size="sm" className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white" onClick={addRow}>
             <Plus className="w-4 h-4 mr-2" /> Add New Row
           </Button>
         </div>
