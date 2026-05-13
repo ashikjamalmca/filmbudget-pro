@@ -113,6 +113,21 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['daily_expenses']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['daily_expenses']['Insert']>;
       };
+      budget_allocations: {
+        Row: {
+          id: string;
+          project_id: string;
+          tenant_id: string | null;
+          department: string;
+          allocated_amount: number;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['budget_allocations']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['budget_allocations']['Insert']>;
+      };
       remuneration_entries: {
         Row: {
           id: string;

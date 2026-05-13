@@ -8,6 +8,7 @@ import { DashboardOverview } from './components/DashboardOverview';
 import { DailyExpenseEntry } from './components/DailyExpenseEntry';
 import { DailyExpenseComparison } from './components/DailyExpenseComparison';
 import { RemunerationManagement } from './components/RemunerationManagement';
+import { BudgetManagement } from './components/BudgetManagement';
 import { Reports } from './components/Reports';
 import { DocumentManagement } from './components/DocumentManagement';
 import { UserManagement } from './components/UserManagement';
@@ -114,6 +115,7 @@ function AppInner() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <DashboardOverview projectId={currentProjectId} />;
+      case 'budget': return <BudgetManagement projectId={currentProjectId} />;
       case 'daily-expenses': return <DailyExpenseEntry projectId={currentProjectId} />;
       case 'expense-comparison': return <DailyExpenseComparison projectId={currentProjectId} />;
       case 'remuneration':
