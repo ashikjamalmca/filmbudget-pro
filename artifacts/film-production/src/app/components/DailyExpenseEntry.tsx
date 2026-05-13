@@ -274,8 +274,13 @@ export function DailyExpenseEntry({ projectId }: Props) {
                     </span>
                   </div>
 
-                  {/* Remove */}
-                  <div className="w-8 flex items-center justify-center">
+                  {/* Add / Remove */}
+                  <div className="flex items-center gap-1">
+                    {idx === rows.length - 1 && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-[#1E3A8A]" onClick={addRow} title="Add new row">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    )}
                     {rows.length > 1 && (
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeRow(row.id)}>
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -370,11 +375,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
           })}
         </div>
 
-        {/* Add row + Daily Total */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t mt-4">
-          <Button variant="outline" onClick={addRow} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" /> Add New Row
-          </Button>
+        {/* Daily Total */}
+        <div className="flex justify-end pt-4 border-t mt-2">
           <div className="text-right">
             <p className="text-sm text-gray-500 mb-0.5">Daily Total</p>
             <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(calculateTotal())}</p>
