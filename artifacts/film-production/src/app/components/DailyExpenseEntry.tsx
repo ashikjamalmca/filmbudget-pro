@@ -463,6 +463,18 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   </div>
                 </div>
 
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
+                  <Textarea
+                    placeholder="Notes, transaction context, or any relevant details..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="resize-none"
+                    rows={2}
+                  />
+                </div>
+
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
                   <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
