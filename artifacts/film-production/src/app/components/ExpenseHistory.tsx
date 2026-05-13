@@ -93,9 +93,9 @@ export function ExpenseHistory({ projectId }: Props) {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-3">
           {/* Search */}
-          <div className="xl:col-span-2 space-y-1">
+          <div className="space-y-1">
             <Label className="text-xs text-gray-500">Search</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
