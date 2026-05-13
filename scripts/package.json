@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "diagnose": "tsx ./src/diagnose.ts",
+    "seed-users": "tsx ./src/seed-users.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4"
   }
 }
