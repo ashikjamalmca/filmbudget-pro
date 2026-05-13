@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,10 +9,12 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
+import { useProfiles } from '../hooks/useProfiles';
+import { useAuth } from '../context/AuthContext';
 
 interface ExpenseRow {
   id: string;
@@ -29,12 +31,22 @@ interface Props {
 export function DailyExpenseEntry({ projectId }: Props) {
   const { expenses, loading, addExpenses, deleteExpense } = useDailyExpenses(projectId);
   const { withSubs, subsFor, loading: catLoading } = useExpenseCategories();
+  const { profile } = useAuth();
+  const { profiles, loading: usersLoading } = useProfiles();
 
   const [date, setDate] = useState<Date>(new Date());
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [description, setDescription] = useState('');
+
+  // Default paidBy to the currently logged-in user's name once profile loads
+  useEffect(() => {
+    if (profile?.full_name && !paidBy) {
+      setPaidBy(profile.full_name);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.full_name]);
   const [rows, setRows] = useState<ExpenseRow[]>([{ id: '1', accountHead: '', amount: 0, nos: 1, bill: null }]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -143,11 +155,30 @@ export function DailyExpenseEntry({ projectId }: Props) {
 
               <div className="space-y-2">
                 <Label>Paid By</Label>
-                <Input
-                  placeholder="e.g. Petty Cash, Accounts, John Doe"
-                  value={paidBy}
-                  onChange={e => setPaidBy(e.target.value)}
-                />
+                {usersLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
+                  </div>
+                ) : (
+                  <Select value={paidBy} onValueChange={setPaidBy}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map(p => (
+                        <SelectItem key={p.id} value={p.full_name ?? p.id}>
+                          <span className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span>{p.full_name ?? p.id}</span>
+                            {p.id === profile?.id && (
+                              <span className="text-xs text-indigo-500 ml-1">(you)</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -223,7 +254,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
             {/* Expense detail rows */}
             <div className="space-y-4">
               <div className="hidden md:grid grid-cols-12 gap-4 text-sm text-gray-600 px-2">
-                <div className="col-span-4">Account Head</div>
+                <div className="col-span-4">Item / Service</div>
                 <div className="col-span-2">Amount (₹)</div>
                 <div className="col-span-2">Nos</div>
                 <div className="col-span-2">Total</div>
@@ -236,7 +267,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   <div className="hidden md:grid grid-cols-12 gap-4 items-center">
                     <div className="col-span-4">
                       <Input placeholder="e.g. Location fee, Meals" value={row.accountHead}
-                        onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
+                        onChange={e => updateRow(row.id, 'accountHead', e.target.value)} title="Item / Service" />
                     </div>
                     <div className="col-span-2">
                       <Input type="number" placeholder="0" value={row.amount || ''}
@@ -261,7 +292,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   {/* Mobile */}
                   <Card className="md:hidden p-4 space-y-3">
                     <div className="space-y-2">
-                      <Label className="text-xs">Account Head</Label>
+                      <Label className="text-xs">Item / Service</Label>
                       <Input placeholder="e.g. Location fee" value={row.accountHead}
                         onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
                     </div>
@@ -325,7 +356,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Date</th>
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Category</th>
-                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Account Head</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Item / Service</th>
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Paid By</th>
                       <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Amount</th>
                       <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Nos</th>
