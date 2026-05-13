@@ -95,7 +95,8 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
     COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'viewer'),
     CASE
-      WHEN NEW.raw_user_meta_data->>'tenant_id' IS NOT NULL AND NEW.raw_user_meta_data->>'tenant_id' != ''
+      WHEN NEW.raw_user_meta_data->>'tenant_id' IS NOT NULL
+        AND NEW.raw_user_meta_data->>'tenant_id' != ''
       THEN (NEW.raw_user_meta_data->>'tenant_id')::uuid
       ELSE NULL
     END,
@@ -110,15 +111,15 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
--- 6. RLS HELPER FUNCTIONS
+-- 6. PUBLIC SCHEMA HELPER FUNCTIONS (not auth schema — Supabase restricts that)
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION auth.user_tenant_id()
+CREATE OR REPLACE FUNCTION public.get_user_tenant_id()
 RETURNS UUID LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT tenant_id FROM profiles WHERE id = auth.uid()
 $$;
 
-CREATE OR REPLACE FUNCTION auth.is_super_admin()
+CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT COALESCE(is_super_admin, FALSE) FROM profiles WHERE id = auth.uid()
 $$;
@@ -137,13 +138,13 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "tenants_super_admin_all" ON tenants;
 CREATE POLICY "tenants_super_admin_all" ON tenants
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 DROP POLICY IF EXISTS "tenants_member_select" ON tenants;
 CREATE POLICY "tenants_member_select" ON tenants
   FOR SELECT TO authenticated
-  USING (id = auth.user_tenant_id());
+  USING (id = public.get_user_tenant_id());
 
 -- ============================================================
 -- 9. RLS POLICIES — SUBSCRIPTIONS
@@ -152,13 +153,13 @@ CREATE POLICY "tenants_member_select" ON tenants
 DROP POLICY IF EXISTS "subscriptions_super_admin" ON subscriptions;
 CREATE POLICY "subscriptions_super_admin" ON subscriptions
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 DROP POLICY IF EXISTS "subscriptions_tenant_select" ON subscriptions;
 CREATE POLICY "subscriptions_tenant_select" ON subscriptions
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 -- ============================================================
 -- 10. UPDATE PROFILES RLS
@@ -170,14 +171,14 @@ DROP POLICY IF EXISTS "profiles_tenant_select" ON profiles;
 
 CREATE POLICY "profiles_super_admin_all" ON profiles
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "profiles_tenant_select" ON profiles
   FOR SELECT TO authenticated
   USING (
-    auth.is_super_admin()
-    OR tenant_id = auth.user_tenant_id()
+    public.is_super_admin()
+    OR tenant_id = public.get_user_tenant_id()
     OR id = auth.uid()
   );
 
@@ -197,24 +198,24 @@ DROP POLICY IF EXISTS "projects_tenant_update" ON projects;
 
 CREATE POLICY "projects_super_admin" ON projects
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "projects_tenant_select" ON projects
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 CREATE POLICY "projects_tenant_insert" ON projects
   FOR INSERT TO authenticated
   WITH CHECK (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'producer')
   );
 
 CREATE POLICY "projects_tenant_update" ON projects
   FOR UPDATE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'producer')
   );
 
@@ -229,31 +230,31 @@ DROP POLICY IF EXISTS "expenses_delete" ON daily_expenses;
 
 CREATE POLICY "expenses_super_admin" ON daily_expenses
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "expenses_tenant_select" ON daily_expenses
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 CREATE POLICY "expenses_tenant_insert" ON daily_expenses
   FOR INSERT TO authenticated
   WITH CHECK (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts', 'production-manager'))
   );
 
 CREATE POLICY "expenses_tenant_update" ON daily_expenses
   FOR UPDATE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
 CREATE POLICY "expenses_tenant_delete" ON daily_expenses
   FOR DELETE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
@@ -268,31 +269,31 @@ DROP POLICY IF EXISTS "artists_delete" ON artists;
 
 CREATE POLICY "artists_super_admin" ON artists
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "artists_tenant_select" ON artists
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 CREATE POLICY "artists_tenant_insert" ON artists
   FOR INSERT TO authenticated
   WITH CHECK (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
 CREATE POLICY "artists_tenant_update" ON artists
   FOR UPDATE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
 CREATE POLICY "artists_tenant_delete" ON artists
   FOR DELETE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'producer')
   );
 
@@ -307,31 +308,31 @@ DROP POLICY IF EXISTS "music_delete" ON music_expenses;
 
 CREATE POLICY "music_super_admin" ON music_expenses
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "music_tenant_select" ON music_expenses
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 CREATE POLICY "music_tenant_insert" ON music_expenses
   FOR INSERT TO authenticated
   WITH CHECK (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
 CREATE POLICY "music_tenant_update" ON music_expenses
   FOR UPDATE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts'))
   );
 
 CREATE POLICY "music_tenant_delete" ON music_expenses
   FOR DELETE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'producer')
   );
 
@@ -345,23 +346,23 @@ DROP POLICY IF EXISTS "documents_delete" ON documents;
 
 CREATE POLICY "documents_super_admin" ON documents
   FOR ALL TO authenticated
-  USING (auth.is_super_admin())
-  WITH CHECK (auth.is_super_admin());
+  USING (public.is_super_admin())
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "documents_tenant_select" ON documents
   FOR SELECT TO authenticated
-  USING (tenant_id = auth.user_tenant_id());
+  USING (tenant_id = public.get_user_tenant_id());
 
 CREATE POLICY "documents_tenant_insert" ON documents
   FOR INSERT TO authenticated
   WITH CHECK (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('producer', 'accounts', 'production-manager'))
   );
 
 CREATE POLICY "documents_tenant_delete" ON documents
   FOR DELETE TO authenticated
   USING (
-    tenant_id = auth.user_tenant_id()
+    tenant_id = public.get_user_tenant_id()
     AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'producer')
   );
