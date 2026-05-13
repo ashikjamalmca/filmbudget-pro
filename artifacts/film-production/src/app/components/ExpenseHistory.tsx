@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Loader2, Trash2, Receipt, Search, X, SlidersHorizontal,
   Paperclip, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  IndianRupee, CalendarDays, LayoutGrid,
 } from 'lucide-react';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpensesPage, type ExpenseFilters } from '../hooks/useExpensesPage';
+import { useExpenseStats } from '../hooks/useExpenseStats';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
 
 interface Props {
@@ -23,6 +25,7 @@ const PAGE_SIZES = [25, 50, 100];
 export function ExpenseHistory({ projectId }: Props) {
   const { deleteExpense, getBillUrl } = useDailyExpenses(projectId);
   const { withSubs } = useExpenseCategories();
+  const { stats, loading: statsLoading } = useExpenseStats(projectId);
 
   // Filter state (immediate — drives UI)
   const [searchInput, setSearchInput] = useState('');
@@ -94,6 +97,85 @@ export function ExpenseHistory({ projectId }: Props) {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4">
+
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Total Spent */}
+        <Card className="p-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+            <IndianRupee className="w-4.5 h-4.5 text-[#1E3A8A]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 font-medium">Total Spent</p>
+            {statsLoading ? (
+              <div className="h-6 w-24 bg-gray-100 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-gray-900 mt-0.5">
+                {formatCurrency(stats.totalSpent)}
+              </p>
+            )}
+            <p className="text-xs text-gray-400 mt-0.5">All time · this project</p>
+          </div>
+        </Card>
+
+        {/* Today Spent */}
+        <Card className="p-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-4.5 h-4.5 text-emerald-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 font-medium">Today's Spending</p>
+            {statsLoading ? (
+              <div className="h-6 w-24 bg-gray-100 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-gray-900 mt-0.5">
+                {formatCurrency(stats.todaySpent)}
+              </p>
+            )}
+            <p className="text-xs text-gray-400 mt-0.5">
+              {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </Card>
+
+        {/* Department Breakdown */}
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+              <LayoutGrid className="w-4.5 h-4.5 text-violet-600" />
+            </div>
+            <p className="text-xs text-gray-500 font-medium">Department Summary</p>
+          </div>
+          {statsLoading ? (
+            <div className="flex gap-2">
+              {[80, 64, 96, 72].map(w => (
+                <div key={w} className={`h-6 w-${w} bg-gray-100 rounded-full animate-pulse`} />
+              ))}
+            </div>
+          ) : stats.departmentBreakdown.length === 0 ? (
+            <p className="text-xs text-gray-400">No data yet</p>
+          ) : (
+            <div className="overflow-x-auto -mx-1 px-1">
+              <div className="flex gap-2 pb-1" style={{ width: 'max-content' }}>
+                {stats.departmentBreakdown.map(({ department, total }) => (
+                  <div
+                    key={department}
+                    className="flex flex-col items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 shrink-0"
+                  >
+                    <span className="text-[10px] text-gray-500 font-medium leading-tight truncate max-w-[90px]" title={department}>
+                      {department}
+                    </span>
+                    <span className="text-xs font-semibold text-[#1E3A8A] mt-0.5 whitespace-nowrap">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* Filter Card */}
       <Card className="p-4 md:p-5">
