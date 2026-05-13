@@ -43,6 +43,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
   const [description, setDescription] = useState('');
   const [linkedRemunerationId, setLinkedRemunerationId] = useState('');
   const [remunerationAmount, setRemunerationAmount] = useState<number>(0);
+  const [payMethod, setPayMethod] = useState('');
+  const [referenceNo, setReferenceNo] = useState('');
 
   // Default paidBy to the currently logged-in user's name once profile loads
   useEffect(() => {
@@ -111,6 +113,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
         bill_url: null,
         paid_by: paidBy || null,
         description: description || null,
+        pay_method: payMethod || null,
+        reference_no: referenceNo || null,
         category_id: categoryId,
         subcategory_id: null,
       }]);
@@ -133,6 +137,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
         bill_url: null,
         paid_by: paidBy || null,
         description: description || null,
+        pay_method: payMethod || null,
+        reference_no: referenceNo || null,
         category_id: categoryId || null,
         subcategory_id: subcategoryId || null,
       })));
@@ -147,6 +153,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setDescription('');
     setLinkedRemunerationId('');
     setRemunerationAmount(0);
+    setPayMethod('');
+    setReferenceNo('');
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -159,6 +167,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setDescription('');
     setLinkedRemunerationId('');
     setRemunerationAmount(0);
+    setPayMethod('');
+    setReferenceNo('');
     setError(null);
   };
 
@@ -325,7 +335,32 @@ export function DailyExpenseEntry({ projectId }: Props) {
               </div>
             </div>
 
-            {/* Row 3 — Description */}
+            {/* Row 3 — Pay Method + Reference No */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label>Pay Method <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Select value={payMethod} onValueChange={setPayMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Credit Card', 'Petty Cash'].map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Reference No <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  placeholder="Cheque no., UPI ref, transaction ID..."
+                  value={referenceNo}
+                  onChange={e => setReferenceNo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Row 4 — Description */}
             <div className="space-y-2 mb-4">
               <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Textarea
@@ -486,6 +521,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Category</th>
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Item / Service</th>
                       <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Paid By</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Pay Method</th>
+                      <th className="text-left py-3 px-4 text-xs text-gray-500 font-medium">Reference</th>
                       <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Amount</th>
                       <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Nos</th>
                       <th className="text-right py-3 px-4 text-xs text-gray-500 font-medium">Total</th>
@@ -509,6 +546,14 @@ export function DailyExpenseEntry({ projectId }: Props) {
                           {item.paid_by
                             ? <Badge variant="outline" className="text-xs font-normal">{item.paid_by}</Badge>
                             : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="py-3 px-4 text-xs">
+                          {(item as any).pay_method
+                            ? <Badge variant="secondary" className="text-xs font-normal">{(item as any).pay_method}</Badge>
+                            : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-600 max-w-[100px] truncate" title={(item as any).reference_no ?? ''}>
+                          {(item as any).reference_no || <span className="text-gray-400">—</span>}
                         </td>
                         <td className="py-3 px-4 text-xs text-right text-gray-700">{formatCurrency(item.amount)}</td>
                         <td className="py-3 px-4 text-xs text-right text-gray-700">{item.nos}</td>

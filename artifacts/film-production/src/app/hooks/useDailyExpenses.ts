@@ -35,6 +35,8 @@ export function useDailyExpenses(projectId: string | null) {
     bill_url: string | null;
     paid_by?: string | null;
     description?: string | null;
+    pay_method?: string | null;
+    reference_no?: string | null;
     category_id?: string | null;
     subcategory_id?: string | null;
   }>) => {
@@ -54,6 +56,8 @@ export function useDailyExpenses(projectId: string | null) {
       bill_url: r.bill_url ?? null,
       paid_by: r.paid_by ?? null,
       description: r.description ?? null,
+      pay_method: r.pay_method ?? null,
+      reference_no: r.reference_no ?? null,
       category_id: r.category_id ?? null,
       subcategory_id: r.subcategory_id ?? null,
     }));

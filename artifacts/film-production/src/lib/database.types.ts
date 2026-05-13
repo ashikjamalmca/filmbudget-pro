@@ -101,6 +101,8 @@ export interface Database {
           bill_url: string | null;
           paid_by: string | null;
           description: string | null;
+          pay_method: string | null;
+          reference_no: string | null;
           category_id: string | null;
           subcategory_id: string | null;
           remuneration_entry_id: string | null;
