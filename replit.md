@@ -1,45 +1,64 @@
-# [Project name]
+# Film Production Budget App
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A film production management app for tracking budgets, managing expenses, artists/technicians, song/BGM, documents, and generating reports.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/film-production run dev` — run the frontend (port assigned by workflow)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React 18, Vite 7, Tailwind CSS v4, shadcn/ui (Radix UI primitives)
+- Charts: Recharts
+- Icons: Lucide React
+- API: Express 5 (shared api-server artifact)
+- Build: Vite
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/film-production/` — the main React frontend app
+  - `src/app/App.tsx` — root component; manages login → project selection → dashboard flow
+  - `src/app/components/` — page components (Dashboard, Expenses, Artists, Reports, etc.)
+  - `src/app/components/ui/` — shadcn/ui component library
+  - `src/app/components/figma/` — Figma-exported helper components
+  - `src/assets/` — PNG image assets (film posters, backgrounds)
+  - `src/styles/` — CSS files (index.css, globals.css, default_theme.css)
+- `artifacts/api-server/` — shared Express API server (currently only /api/healthz)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Source imported directly from private GitHub repo (ashikjamalmca/Filmproduction) via GitHub OAuth connector
+- The original repo used Figma Make's versioned import convention (`@pkg@1.0.0`); imports were normalized to standard package names on import
+- `figma:asset/` imports are resolved via a custom Vite plugin pointing to `src/assets/`
+- The `@` path alias resolves to `src/app/` (matching the original repo's convention)
+- App state is managed with local React state (no backend/DB needed for the frontend)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Login page with role selection (Producer, Director, etc.) and demo credentials
+- Project selection screen showing active film projects
+- Dashboard with budget overview, expense summaries, and charts
+- Daily expense entry and comparison views
+- Artists & technicians management
+- Song/BGM tracking
+- Document management
+- Reports with charts and export options
+- User management
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- No codebase changes initially — imported as-is from GitHub
+- Changes to be made step by step in a controlled manner
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The original repo's package.json used npm alias syntax (`"pkg@ver": "npm:pkg@ver"`) — this was not carried over; standard package names are used instead
+- CSS theme variables in `src/styles/default_theme.css` and `globals.css` control all colors — the theme uses placeholder `red` values in spots that should be replaced with real HSL values when theming work begins
 
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Demo credentials (from the app): `demo@filmproduction.com` / `demo123`

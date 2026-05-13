@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Film Production Budget App"
+version = "1.0.0"
+id = "artifacts/film-production"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22171
+
+[services.development]
+run = "pnpm --filter @workspace/film-production run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/film-production", "run", "build" ]
+publicDir = "artifacts/film-production/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22171"
+BASE_PATH = "/"
