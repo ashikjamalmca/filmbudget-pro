@@ -64,9 +64,20 @@ function NoTenantScreen({ onLogout }: { onLogout: () => void }) {
 
 function AppInner() {
   const { session, loading, isSuperAdmin, tenantId, tenant } = useAuth();
-  const [appState, setAppState] = useState<AppState>('login');
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [appState, setAppState] = useState<AppState>(() =>
+    (localStorage.getItem('app_state') as AppState | null) ?? 'login'
+  );
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(
+    () => localStorage.getItem('current_project_id')
+  );
+  const [currentPage, setCurrentPage] = useState(
+    () => localStorage.getItem('current_page') ?? 'dashboard'
+  );
+
+  const navigateTo = (page: string) => {
+    setCurrentPage(page);
+    localStorage.setItem('current_page', page);
+  };
 
   if (loading) {
     return (
@@ -104,12 +115,17 @@ function AppInner() {
 
   const handleProjectSelect = (projectId: string) => {
     setCurrentProjectId(projectId);
+    localStorage.setItem('current_project_id', projectId);
     setAppState('dashboard');
-    setCurrentPage('dashboard');
+    localStorage.setItem('app_state', 'dashboard');
+    navigateTo('dashboard');
   };
 
   const handleLogout = () => {
     setCurrentProjectId(null);
+    localStorage.removeItem('current_project_id');
+    localStorage.removeItem('current_page');
+    localStorage.removeItem('app_state');
     setAppState('login');
     setCurrentPage('dashboard');
   };
@@ -139,7 +155,7 @@ function AppInner() {
   return (
     <DashboardLayout
       currentPage={currentPage}
-      onNavigate={setCurrentPage}
+      onNavigate={navigateTo}
       onLogout={handleLogout}
       projectId={currentProjectId}
     >
