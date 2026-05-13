@@ -7,12 +7,50 @@ export type DocumentFileType = 'pdf' | 'image' | 'excel' | 'other';
 export interface Database {
   public: {
     Tables: {
+      tenants: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          owner_id: string | null;
+          logo_url: string | null;
+          is_active: boolean;
+          suspended_at: string | null;
+          suspension_reason: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['tenants']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['tenants']['Insert']>;
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          plan_name: string;
+          valid_from: string;
+          valid_until: string | null;
+          max_users: number;
+          max_projects: number;
+          max_storage_gb: number;
+          is_active: boolean;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['subscriptions']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>;
+      };
       profiles: {
         Row: {
           id: string;
           email: string;
           full_name: string;
           role: UserRole;
+          tenant_id: string | null;
+          is_super_admin: boolean;
           assigned_project_id: string | null;
           is_active: boolean;
           created_at: string;
@@ -24,6 +62,7 @@ export interface Database {
       projects: {
         Row: {
           id: string;
+          tenant_id: string | null;
           title: string;
           date_range: string;
           total_budget: number;
@@ -39,6 +78,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          tenant_id: string | null;
           expense_date: string;
           department: string;
           account_head: string;
@@ -57,6 +97,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          tenant_id: string | null;
           name: string;
           role: string;
           budget: number;
@@ -76,6 +117,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          tenant_id: string | null;
           role: string;
           description: string;
           budget: number;
@@ -92,6 +134,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          tenant_id: string | null;
           name: string;
           file_type: DocumentFileType;
           department: string;

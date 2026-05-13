@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
 type MusicExpense = Database['public']['Tables']['music_expenses']['Row'];
 
 export function useMusicExpenses(projectId: string | null) {
+  const { tenantId } = useAuth();
   const [expenses, setExpenses] = useState<MusicExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +14,7 @@ export function useMusicExpenses(projectId: string | null) {
   const fetchExpenses = useCallback(async () => {
     if (!projectId) { setExpenses([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('music_expenses')
       .select('*')
       .eq('project_id', projectId)
@@ -34,6 +36,7 @@ export function useMusicExpenses(projectId: string | null) {
     const { error } = await (supabase as any).from('music_expenses').insert({
       ...values,
       project_id: projectId,
+      tenant_id: tenantId,
       paid: 0,
       balance: values.budget,
     });
@@ -53,7 +56,7 @@ export function useMusicExpenses(projectId: string | null) {
   };
 
   const deleteExpense = async (id: string) => {
-    const { error } = await supabase.from('music_expenses').delete().eq('id', id);
+    const { error } = await (supabase as any).from('music_expenses').delete().eq('id', id);
     if (error) return { error: error.message };
     await fetchExpenses();
     return { error: null };

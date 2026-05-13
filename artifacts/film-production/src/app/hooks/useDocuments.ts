@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 type DocumentFileType = Database['public']['Enums']['document_file_type'];
 
 export function useDocuments(projectId: string | null) {
+  const { tenantId } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +15,7 @@ export function useDocuments(projectId: string | null) {
   const fetchDocuments = useCallback(async () => {
     if (!projectId) { setDocuments([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('documents')
       .select('*')
       .eq('project_id', projectId)
@@ -46,6 +48,7 @@ export function useDocuments(projectId: string | null) {
 
     const { error: dbError } = await (supabase as any).from('documents').insert({
       project_id: projectId,
+      tenant_id: tenantId,
       name: file.name,
       file_type: fileType,
       department,
@@ -66,7 +69,7 @@ export function useDocuments(projectId: string | null) {
 
   const deleteDocument = async (id: string, storagePath: string) => {
     await supabase.storage.from('documents').remove([storagePath]);
-    const { error } = await supabase.from('documents').delete().eq('id', id);
+    const { error } = await (supabase as any).from('documents').delete().eq('id', id);
     if (error) return { error: error.message };
     await fetchDocuments();
     return { error: null };

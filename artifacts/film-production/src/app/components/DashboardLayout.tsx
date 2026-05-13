@@ -1,40 +1,16 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard,
-  Receipt,
-  BarChart3,
-  Users,
-  Wrench,
-  Music,
-  FileText,
-  FolderOpen,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  LogOut,
-  User,
-  DollarSign,
-  Menu,
-  Film,
+  LayoutDashboard, Receipt, BarChart3, Users, Wrench, Music,
+  FileText, FolderOpen, Settings, ChevronLeft, ChevronRight,
+  ChevronDown, ChevronUp, LogOut, User, DollarSign, Menu, Film,
+  AlertTriangle, Building2,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from './ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useAuth } from '../context/AuthContext';
 
 interface DashboardLayoutProps {
@@ -46,12 +22,14 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, currentPage, onNavigate, onLogout, projectId }: DashboardLayoutProps) {
-  const { profile, signOut } = useAuth();
+  const { profile, tenant, subscription, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [remunerationExpanded, setRemunerationExpanded] = useState(
     ['artists', 'technicians', 'song-bgm'].includes(currentPage)
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isProducer = profile?.role === 'producer';
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -59,7 +37,7 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
     { id: 'expense-comparison', label: 'Budget Comparison', icon: BarChart3 },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'documents', label: 'Documents', icon: FolderOpen },
-    { id: 'users', label: 'User Management', icon: Settings },
+    ...(isProducer ? [{ id: 'users', label: 'Team Management', icon: Settings }] : []),
   ];
 
   const remunerationItems = [
@@ -78,8 +56,24 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
     onLogout();
   };
 
+  // Subscription expiry warning
+  const subExpired = subscription?.valid_until ? new Date(subscription.valid_until) < new Date() : false;
+  const subExpiringSoon = subscription?.valid_until && !subExpired
+    ? new Date(subscription.valid_until).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000
+    : false;
+
   const NavigationContent = () => (
     <>
+      {/* Tenant info */}
+      {!collapsed && tenant && (
+        <div className="px-4 py-3 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-3.5 h-3.5 text-white/50" />
+            <span className="text-xs text-white/60 truncate">{tenant.name}</span>
+          </div>
+        </div>
+      )}
+
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -161,7 +155,7 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
           {!collapsed && (
             <div className="flex items-center gap-2">
               <Film className="w-6 h-6" />
-              <span className="text-lg">FilmBudget Pro</span>
+              <span className="text-base font-semibold">FilmBudget Pro</span>
             </div>
           )}
           <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="text-white hover:bg-white/10">
@@ -172,6 +166,20 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Subscription warnings */}
+        {subExpired && (
+          <div className="bg-red-600 text-white px-4 py-2 text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            Your subscription has expired. Contact your administrator to renew.
+          </div>
+        )}
+        {subExpiringSoon && !subExpired && (
+          <div className="bg-amber-500 text-white px-4 py-2 text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            Your subscription expires on {new Date(subscription!.valid_until!).toLocaleDateString('en-IN')}. Please renew soon.
+          </div>
+        )}
+
         <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between gap-4">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -192,22 +200,25 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
           </Sheet>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg lg:text-xl text-gray-900 truncate">FilmBudget Pro</h1>
+            <h1 className="text-base lg:text-lg font-semibold text-gray-900 truncate">
+              {tenant?.name ?? 'FilmBudget Pro'}
+            </h1>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 rounded-full bg-[#1E3A8A] flex items-center justify-center text-white">
-                  <User className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-full bg-[#1E3A8A] flex items-center justify-center text-white">
+                  <User className="w-3.5 h-3.5" />
                 </div>
-                <span className="hidden md:inline">{displayName}</span>
+                <span className="hidden md:inline text-sm">{displayName}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
-                <div>{displayName}</div>
+                <div className="font-medium">{displayName}</div>
                 <div className="text-xs text-gray-500 font-normal">{roleLabel}</div>
+                {tenant && <div className="text-xs text-gray-400 font-normal">{tenant.name}</div>}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">

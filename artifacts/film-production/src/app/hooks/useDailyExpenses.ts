@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
 type DailyExpense = Database['public']['Tables']['daily_expenses']['Row'];
-type DailyExpenseInsert = Database['public']['Tables']['daily_expenses']['Insert'];
 
 export function useDailyExpenses(projectId: string | null) {
+  const { tenantId } = useAuth();
   const [expenses, setExpenses] = useState<DailyExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +14,7 @@ export function useDailyExpenses(projectId: string | null) {
   const fetchExpenses = useCallback(async () => {
     if (!projectId) { setExpenses([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('daily_expenses')
       .select('*')
       .eq('project_id', projectId)
@@ -39,6 +40,7 @@ export function useDailyExpenses(projectId: string | null) {
     const inserts = rows.map(r => ({
       ...r,
       project_id: projectId,
+      tenant_id: tenantId,
       added_by: user.id,
       total: r.amount * r.nos,
     }));
@@ -49,7 +51,7 @@ export function useDailyExpenses(projectId: string | null) {
   };
 
   const deleteExpense = async (id: string) => {
-    const { error } = await supabase.from('daily_expenses').delete().eq('id', id);
+    const { error } = await (supabase as any).from('daily_expenses').delete().eq('id', id);
     if (error) return { error: error.message };
     await fetchExpenses();
     return { error: null };

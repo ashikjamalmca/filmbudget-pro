@@ -26,12 +26,25 @@ export async function requireRole(roles: string[]) {
     const user = (req as any).user;
     if (!user) { res.status(401).json({ error: 'Unauthenticated' }); return; }
     const supabaseAdmin = (await import('../lib/supabase.js')).supabaseAdmin;
-    const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
-    if (!profile || !roles.includes(profile.role)) {
+    const { data: profile } = await supabaseAdmin.from('profiles').select('role,tenant_id,is_super_admin').eq('id', user.id).single();
+    if (!profile || (!roles.includes(profile.role) && !profile.is_super_admin)) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
     (req as any).profile = profile;
     next();
   };
+}
+
+export async function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user;
+  if (!user) { res.status(401).json({ error: 'Unauthenticated' }); return; }
+  const supabaseAdmin = (await import('../lib/supabase.js')).supabaseAdmin;
+  const { data: profile } = await supabaseAdmin.from('profiles').select('is_super_admin').eq('id', user.id).single();
+  if (!profile?.is_super_admin) {
+    res.status(403).json({ error: 'Super admin access required' });
+    return;
+  }
+  (req as any).profile = profile;
+  next();
 }

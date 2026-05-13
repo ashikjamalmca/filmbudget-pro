@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import type { Database } from '../../lib/database.types';
 
 type Artist = Database['public']['Tables']['artists']['Row'];
 type PaymentStatus = Database['public']['Enums']['payment_status'];
 
 export function useArtists(projectId: string | null, type: 'artist' | 'technician') {
+  const { tenantId } = useAuth();
   const [people, setPeople] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +15,7 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
   const fetchPeople = useCallback(async () => {
     if (!projectId) { setPeople([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('artists')
       .select('*')
       .eq('project_id', projectId)
@@ -40,6 +42,7 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
     const { error } = await (supabase as any).from('artists').insert({
       ...values,
       project_id: projectId,
+      tenant_id: tenantId,
       type,
       balance,
       status,
@@ -74,7 +77,7 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
   };
 
   const deletePerson = async (id: string) => {
-    const { error } = await supabase.from('artists').delete().eq('id', id);
+    const { error } = await (supabase as any).from('artists').delete().eq('id', id);
     if (error) return { error: error.message };
     await fetchPeople();
     return { error: null };
