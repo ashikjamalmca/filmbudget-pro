@@ -80,15 +80,27 @@ export function useDailyExpenses(projectId: string | null) {
       .from('documents')
       .upload(path, file, { upsert: true });
     if (uploadError) return { error: uploadError.message, url: null };
-    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(path);
+    // Store storage path in DB; generate a signed URL for immediate feedback
+    const { data: signedData } = await supabaseStorage.storage
+      .from('documents')
+      .createSignedUrl(path, 3600);
     const { error: updateError } = await (supabase as any)
       .from('daily_expenses')
-      .update({ bill_url: data.publicUrl })
+      .update({ bill_url: path })
       .eq('id', expenseId);
     if (updateError) return { error: updateError.message, url: null };
     await fetchExpenses();
-    return { error: null, url: data.publicUrl };
+    return { error: null, url: signedData?.signedUrl ?? null };
   };
 
-  return { expenses, loading, error, refetch: fetchExpenses, addExpenses, deleteExpense, uploadBill };
+  const getBillUrl = async (storagePath: string): Promise<string | null> => {
+    if (!storagePath) return null;
+    if (storagePath.startsWith('http')) return storagePath;
+    const { data } = await supabaseStorage.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+    return data?.signedUrl ?? null;
+  };
+
+  return { expenses, loading, error, refetch: fetchExpenses, addExpenses, deleteExpense, uploadBill, getBillUrl };
 }
