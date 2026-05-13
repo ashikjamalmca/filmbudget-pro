@@ -22,7 +22,7 @@ const DEPT_OPTIONS = [
   'Post Production', 'Administration', 'Marketing', 'Remuneration', 'Others',
 ];
 
-interface Props { projectId: string | null; }
+interface Props { projectId: string | null; defaultTab?: 'tracker' | 'setup'; }
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
@@ -43,7 +43,7 @@ function PctBar({ pct, over }: { pct: number; over: boolean }) {
   );
 }
 
-export function BudgetManagement({ projectId }: Props) {
+export function BudgetManagement({ projectId, defaultTab }: Props) {
   const {
     allocations, spentByDept, totalBudget, totalAllocated, totalSpent, unallocated,
     loading, addAllocation, updateAllocation, deleteAllocation, updateProjectBudget,
@@ -159,7 +159,7 @@ export function BudgetManagement({ projectId }: Props) {
       )}
 
       {projectId && (
-        <Tabs defaultValue="tracker">
+        <Tabs defaultValue={defaultTab ?? 'tracker'}>
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="tracker" className="flex items-center gap-1.5">
               <BarChart3 className="w-4 h-4" /> Budget Tracker

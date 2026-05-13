@@ -3,7 +3,8 @@ import {
   LayoutDashboard, Receipt, BarChart3, Users,
   FileText, FolderOpen, Settings, ChevronLeft, ChevronRight,
   LogOut, User, DollarSign, Menu, Film,
-  AlertTriangle, Building2, Wallet, History,
+  AlertTriangle, Building2, Wallet, History, ChevronDown, ChevronUp,
+  TrendingUp, Sliders,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -25,15 +26,28 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
   const { profile, tenant, subscription, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(
+    ['budget-tracker', 'budget-comparison', 'budget-setup'].includes(currentPage)
+  );
 
   const isProducer = profile?.role === 'producer';
 
-  const menuItems = [
+  const budgetPages = ['budget-tracker', 'budget-comparison', 'budget-setup'];
+  const isBudgetActive = budgetPages.includes(currentPage);
+
+  const topItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'budget', label: 'Budget', icon: Wallet },
+  ];
+
+  const budgetSubItems = [
+    { id: 'budget-tracker', label: 'Budget Tracker', icon: TrendingUp },
+    { id: 'budget-comparison', label: 'Budget Comparison', icon: BarChart3 },
+    { id: 'budget-setup', label: 'Budget Setup', icon: Sliders },
+  ];
+
+  const bottomItems = [
     { id: 'daily-expenses', label: 'Daily Expense Entry', icon: Receipt },
     { id: 'expense-history', label: 'Expense History', icon: History },
-    { id: 'expense-comparison', label: 'Budget Comparison', icon: BarChart3 },
     { id: 'remuneration', label: 'Remuneration', icon: DollarSign },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'documents', label: 'Documents', icon: FolderOpen },
@@ -70,7 +84,8 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
       )}
 
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
+        {/* Top items */}
+        {topItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
           return (
@@ -88,6 +103,66 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
           );
         })}
 
+        {/* Budget group */}
+        <button
+          onClick={() => {
+            if (collapsed) { onNavigate('budget-tracker'); setMobileMenuOpen(false); }
+            else setBudgetOpen(o => !o);
+          }}
+          className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+            isBudgetActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+          }`}
+          title={collapsed ? 'Budget' : undefined}
+        >
+          <Wallet className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Budget</span>
+              {budgetOpen ? <ChevronUp className="w-4 h-4 opacity-60" /> : <ChevronDown className="w-4 h-4 opacity-60" />}
+            </>
+          )}
+        </button>
+
+        {/* Budget sub-items */}
+        {!collapsed && budgetOpen && (
+          <div className="ml-3 pl-3 border-l border-white/20 space-y-0.5">
+            {budgetSubItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { onNavigate(item.id); setMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${
+                    isActive ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Bottom items */}
+        {bottomItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentPage === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => { onNavigate(item.id); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                isActive ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+              title={collapsed ? item.label : undefined}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="p-2 border-t border-white/10">

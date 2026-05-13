@@ -116,10 +116,11 @@ function AppInner() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <DashboardOverview projectId={currentProjectId} />;
-      case 'budget': return <BudgetManagement projectId={currentProjectId} />;
+      case 'budget-tracker': return <BudgetManagement projectId={currentProjectId} defaultTab="tracker" />;
+      case 'budget-setup': return <BudgetManagement projectId={currentProjectId} defaultTab="setup" />;
+      case 'budget-comparison': return <DailyExpenseComparison projectId={currentProjectId} />;
       case 'daily-expenses': return <DailyExpenseEntry projectId={currentProjectId} />;
       case 'expense-history': return <ExpenseHistory projectId={currentProjectId} />;
-      case 'expense-comparison': return <DailyExpenseComparison projectId={currentProjectId} />;
       case 'remuneration':
       case 'artists':
       case 'technicians':
