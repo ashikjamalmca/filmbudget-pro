@@ -16,6 +16,7 @@ import {
   BarChart3, ShieldAlert,
 } from 'lucide-react';
 import { useBudget } from '../hooks/useBudget';
+import { DailyExpenseComparison } from './DailyExpenseComparison';
 
 const DEPT_OPTIONS = [
   'Production', 'Logistics', 'Crew & Cast', 'Equipment',
@@ -164,6 +165,9 @@ export function BudgetManagement({ projectId, defaultTab }: Props) {
             <TabsTrigger value="tracker" className="flex items-center gap-1.5">
               <BarChart3 className="w-4 h-4" /> Budget Tracker
             </TabsTrigger>
+            <TabsTrigger value="comparison" className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4" /> Budget Comparison
+            </TabsTrigger>
             <TabsTrigger value="setup" className="flex items-center gap-1.5">
               <Wallet className="w-4 h-4" /> Budget Setup
             </TabsTrigger>
@@ -303,6 +307,11 @@ export function BudgetManagement({ projectId, defaultTab }: Props) {
                   : `${fmt(unallocated)} (${((unallocated / totalBudget) * 100).toFixed(1)}% of budget) is unallocated across departments.`}
               </div>
             )}
+          </TabsContent>
+
+          {/* ── COMPARISON TAB ──────────────────────────── */}
+          <TabsContent value="comparison" className="mt-4">
+            <DailyExpenseComparison projectId={projectId} />
           </TabsContent>
 
           {/* ── SETUP TAB ───────────────────────────────── */}
