@@ -62,9 +62,12 @@ export function useDocuments(projectId: string | null) {
     return { error: null };
   };
 
-  const getDownloadUrl = (storagePath: string) => {
-    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(storagePath);
-    return data.publicUrl;
+  const getDownloadUrl = async (storagePath: string): Promise<string> => {
+    const { data, error } = await supabaseStorage.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+    if (error || !data) throw new Error(error?.message ?? 'Could not generate download link');
+    return data.signedUrl;
   };
 
   const deleteDocument = async (id: string, storagePath: string) => {
