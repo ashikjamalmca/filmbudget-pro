@@ -9,7 +9,7 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe, User, DollarSign, Link2 } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, Tag, Globe, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
@@ -41,8 +41,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
   const [subcategoryId, setSubcategoryId] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [description, setDescription] = useState('');
-  const [isRemunerationPayment, setIsRemunerationPayment] = useState(false);
   const [linkedRemunerationId, setLinkedRemunerationId] = useState('');
+  const [remunerationAmount, setRemunerationAmount] = useState<number>(0);
 
   // Default paidBy to the currently logged-in user's name once profile loads
   useEffect(() => {
@@ -67,48 +67,76 @@ export function DailyExpenseEntry({ projectId }: Props) {
 
   const selectedCategory = withSubs.find(c => c.id === categoryId);
   const availableSubcategories = categoryId ? subsFor(categoryId) : [];
+  const isRemunerationCategory = selectedCategory?.name?.toLowerCase() === 'remuneration';
 
   const handleCategoryChange = (val: string) => {
     setCategoryId(val);
     setSubcategoryId('');
+    setLinkedRemunerationId('');
+    setRemunerationAmount(0);
   };
 
   const handleSave = async () => {
-    if (!categoryId || rows.some(r => !r.accountHead)) {
-      setError('Please select a category and fill in all item/service descriptions.');
+    if (!categoryId) {
+      setError('Please select a category.');
       return;
     }
-    if (isRemunerationPayment && !linkedRemunerationId) {
-      setError('Please select a remuneration record to link, or uncheck the remuneration option.');
-      return;
+    if (isRemunerationCategory) {
+      if (!linkedRemunerationId) {
+        setError('Please select a person from the Subcategory / Person Name dropdown.');
+        return;
+      }
+      if (!remunerationAmount || remunerationAmount <= 0) {
+        setError('Please enter a payment amount.');
+        return;
+      }
+    } else {
+      if (rows.some(r => !r.accountHead)) {
+        setError('Please fill in all Item / Service descriptions.');
+        return;
+      }
     }
     setSaving(true);
     setError(null);
-    const { error: err } = await addExpenses(rows.map(r => ({
-      expense_date: format(date, 'yyyy-MM-dd'),
-      department: selectedCategory?.name ?? '',
-      account_head: r.accountHead,
-      amount: r.amount,
-      nos: r.nos,
-      bill_url: null,
-      paid_by: paidBy || null,
-      description: description || null,
-      category_id: categoryId || null,
-      subcategory_id: subcategoryId || null,
-    })));
-    if (err) { setSaving(false); setError(err); return; }
 
-    // If this is a remuneration payment, record it in the payment history
-    if (isRemunerationPayment && linkedRemunerationId) {
-      const totalAmount = calculateTotal();
+    if (isRemunerationCategory) {
+      const linkedEntry = remunerationEntries.find(e => e.id === linkedRemunerationId);
+      const personName = linkedEntry?.person_name ?? 'Remuneration Payment';
+      const { error: err } = await addExpenses([{
+        expense_date: format(date, 'yyyy-MM-dd'),
+        department: 'Remuneration',
+        account_head: personName,
+        amount: remunerationAmount,
+        nos: 1,
+        bill_url: null,
+        paid_by: paidBy || null,
+        description: description || null,
+        category_id: categoryId,
+        subcategory_id: null,
+      }]);
+      if (err) { setSaving(false); setError(err); return; }
       await addRemunerationPayment(
         linkedRemunerationId,
-        totalAmount,
+        remunerationAmount,
         format(date, 'yyyy-MM-dd'),
         paidBy || null,
         description || 'Paid via Daily Expenses',
         null,
       );
+    } else {
+      const { error: err } = await addExpenses(rows.map(r => ({
+        expense_date: format(date, 'yyyy-MM-dd'),
+        department: selectedCategory?.name ?? '',
+        account_head: r.accountHead,
+        amount: r.amount,
+        nos: r.nos,
+        bill_url: null,
+        paid_by: paidBy || null,
+        description: description || null,
+        category_id: categoryId || null,
+        subcategory_id: subcategoryId || null,
+      })));
+      if (err) { setSaving(false); setError(err); return; }
     }
 
     setSaving(false);
@@ -117,8 +145,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setSubcategoryId('');
     setPaidBy('');
     setDescription('');
-    setIsRemunerationPayment(false);
     setLinkedRemunerationId('');
+    setRemunerationAmount(0);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -129,8 +157,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setSubcategoryId('');
     setPaidBy('');
     setDescription('');
-    setIsRemunerationPayment(false);
     setLinkedRemunerationId('');
+    setRemunerationAmount(0);
     setError(null);
   };
 
@@ -243,25 +271,57 @@ export function DailyExpenseEntry({ projectId }: Props) {
               </div>
 
               <div className="space-y-2">
-                <Label>Subcategory <span className="text-gray-400 font-normal">(optional)</span></Label>
-                <Select
-                  value={subcategoryId}
-                  onValueChange={setSubcategoryId}
-                  disabled={!categoryId || availableSubcategories.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      !categoryId ? 'Select a category first' :
-                      availableSubcategories.length === 0 ? 'No subcategories available' :
-                      'Select subcategory'
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSubcategories.map(sub => (
-                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isRemunerationCategory ? (
+                  <>
+                    <Label>Person Name <span className="text-red-400">*</span></Label>
+                    {remunerationEntries.length === 0 ? (
+                      <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        No remuneration records found. Add them first in the Remuneration module.
+                      </p>
+                    ) : (
+                      <Select value={linkedRemunerationId} onValueChange={setLinkedRemunerationId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {remunerationEntries.map(e => (
+                            <SelectItem key={e.id} value={e.id}>
+                              <span className="flex items-center gap-2">
+                                <span className="font-medium">{e.person_name}</span>
+                                <span className="text-gray-400 text-xs">· {e.department}</span>
+                                <span className="text-amber-600 text-xs ml-1">
+                                  Bal: ₹{e.balance_amount.toLocaleString('en-IN')}
+                                </span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Label>Subcategory <span className="text-gray-400 font-normal">(optional)</span></Label>
+                    <Select
+                      value={subcategoryId}
+                      onValueChange={setSubcategoryId}
+                      disabled={!categoryId || availableSubcategories.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          !categoryId ? 'Select a category first' :
+                          availableSubcategories.length === 0 ? 'No subcategories available' :
+                          'Select subcategory'
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSubcategories.map(sub => (
+                          <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
               </div>
             </div>
 
@@ -277,145 +337,135 @@ export function DailyExpenseEntry({ projectId }: Props) {
               />
             </div>
 
-            {/* Row 4 — Remuneration linking */}
-            <div className="mb-6">
-              <button
-                type="button"
-                onClick={() => { setIsRemunerationPayment(v => !v); setLinkedRemunerationId(''); }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
-                  isRemunerationPayment
-                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                    : 'border-gray-200 text-gray-500 hover:border-indigo-200 hover:text-indigo-600'
-                }`}
-              >
-                <DollarSign className="w-4 h-4" />
-                <span>
-                  {isRemunerationPayment ? 'Linked as Remuneration Payment' : 'Link as Remuneration Payment'}
-                </span>
-                <Link2 className="w-3.5 h-3.5 ml-1 opacity-60" />
-              </button>
-
-              {isRemunerationPayment && (
-                <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100 space-y-2">
-                  <Label className="text-xs text-indigo-700">Select Remuneration Record</Label>
-                  {remunerationEntries.length === 0 ? (
-                    <p className="text-xs text-indigo-500">
-                      No remuneration entries found for this project. Add them first in the Remuneration module.
-                    </p>
-                  ) : (
-                    <Select value={linkedRemunerationId} onValueChange={setLinkedRemunerationId}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select person / record" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {remunerationEntries.map(e => (
-                          <SelectItem key={e.id} value={e.id}>
-                            <span className="flex items-center gap-2">
-                              <span className="font-medium">{e.person_name}</span>
-                              <span className="text-gray-400 text-xs">· {e.department}</span>
-                              <span className="text-amber-600 text-xs ml-1">
-                                Balance: ₹{e.balance_amount.toLocaleString('en-IN')}
-                              </span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <p className="text-xs text-indigo-500">
-                    The total expense amount will be recorded as a payment against the selected remuneration record.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Expense detail rows */}
-            <div className="space-y-4">
-              <div className="hidden md:grid grid-cols-12 gap-4 text-sm text-gray-600 px-2">
-                <div className="col-span-4">Item / Service</div>
-                <div className="col-span-2">Amount (₹)</div>
-                <div className="col-span-2">Nos</div>
-                <div className="col-span-2">Total</div>
-                <div className="col-span-2">Actions</div>
-              </div>
-
-              {rows.map(row => (
-                <div key={row.id}>
-                  {/* Desktop */}
-                  <div className="hidden md:grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-4">
-                      <Input placeholder="e.g. Location fee, Meals" value={row.accountHead}
-                        onChange={e => updateRow(row.id, 'accountHead', e.target.value)} title="Item / Service" />
-                    </div>
-                    <div className="col-span-2">
-                      <Input type="number" placeholder="0" value={row.amount || ''}
-                        onChange={e => updateRow(row.id, 'amount', parseFloat(e.target.value) || 0)} />
-                    </div>
-                    <div className="col-span-2">
-                      <Input type="number" placeholder="1" value={row.nos || ''}
-                        onChange={e => updateRow(row.id, 'nos', parseInt(e.target.value) || 1)} />
-                    </div>
-                    <div className="col-span-2 px-2">
-                      <span className="text-gray-900 font-medium">{formatCurrency(row.amount * row.nos)}</span>
-                    </div>
-                    <div className="col-span-2">
-                      {rows.length > 1 && (
-                        <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
+            {/* Expense detail rows — simplified for Remuneration, full multi-row otherwise */}
+            {isRemunerationCategory ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg space-y-3">
+                  <div className="space-y-2">
+                    <Label>Payment Amount (₹) <span className="text-red-400">*</span></Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      className="text-lg font-semibold bg-white"
+                      value={remunerationAmount || ''}
+                      onChange={e => setRemunerationAmount(parseFloat(e.target.value) || 0)}
+                    />
                   </div>
+                  {linkedRemunerationId && (() => {
+                    const entry = remunerationEntries.find(e => e.id === linkedRemunerationId);
+                    if (!entry) return null;
+                    return (
+                      <div className="flex flex-wrap gap-4 text-sm pt-1 border-t border-indigo-100">
+                        <span className="text-gray-500">Agreed: <span className="font-medium text-gray-800">₹{entry.agreed_amount.toLocaleString('en-IN')}</span></span>
+                        <span className="text-gray-500">Paid so far: <span className="font-medium text-green-700">₹{entry.paid_amount.toLocaleString('en-IN')}</span></span>
+                        <span className="text-gray-500">Balance: <span className="font-medium text-amber-700">₹{entry.balance_amount.toLocaleString('en-IN')}</span></span>
+                      </div>
+                    );
+                  })()}
+                </div>
 
-                  {/* Mobile */}
-                  <Card className="md:hidden p-4 space-y-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Item / Service</Label>
-                      <Input placeholder="e.g. Location fee" value={row.accountHead}
-                        onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Amount (₹)</Label>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2 border-t">
+                  <div className="text-left sm:text-right w-full sm:w-auto">
+                    <p className="text-sm text-gray-600 mb-1">Payment Amount</p>
+                    <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(remunerationAmount)}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
+                  <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
+                    {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Save Payment'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="hidden md:grid grid-cols-12 gap-4 text-sm text-gray-600 px-2">
+                  <div className="col-span-4">Item / Service</div>
+                  <div className="col-span-2">Amount (₹)</div>
+                  <div className="col-span-2">Nos</div>
+                  <div className="col-span-2">Total</div>
+                  <div className="col-span-2">Actions</div>
+                </div>
+
+                {rows.map(row => (
+                  <div key={row.id}>
+                    {/* Desktop */}
+                    <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                      <div className="col-span-4">
+                        <Input placeholder="e.g. Location fee, Meals" value={row.accountHead}
+                          onChange={e => updateRow(row.id, 'accountHead', e.target.value)} title="Item / Service" />
+                      </div>
+                      <div className="col-span-2">
                         <Input type="number" placeholder="0" value={row.amount || ''}
                           onChange={e => updateRow(row.id, 'amount', parseFloat(e.target.value) || 0)} />
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs">Nos</Label>
+                      <div className="col-span-2">
                         <Input type="number" placeholder="1" value={row.nos || ''}
                           onChange={e => updateRow(row.id, 'nos', parseInt(e.target.value) || 1)} />
                       </div>
+                      <div className="col-span-2 px-2">
+                        <span className="text-gray-900 font-medium">{formatCurrency(row.amount * row.nos)}</span>
+                      </div>
+                      <div className="col-span-2">
+                        {rows.length > 1 && (
+                          <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="text-sm text-gray-600">Total:</span>
-                      <span className="text-base font-medium">{formatCurrency(row.amount * row.nos)}</span>
-                    </div>
-                    {rows.length > 1 && (
-                      <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
-                        <Trash2 className="w-4 h-4 text-red-500 mr-2" /> Remove
-                      </Button>
-                    )}
-                  </Card>
-                </div>
-              ))}
 
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
-                <Button variant="outline" onClick={addRow} className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" /> Add New Row
-                </Button>
-                <div className="text-left sm:text-right w-full sm:w-auto">
-                  <p className="text-sm text-gray-600 mb-1">Daily Total</p>
-                  <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(calculateTotal())}</p>
+                    {/* Mobile */}
+                    <Card className="md:hidden p-4 space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Item / Service</Label>
+                        <Input placeholder="e.g. Location fee" value={row.accountHead}
+                          onChange={e => updateRow(row.id, 'accountHead', e.target.value)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Amount (₹)</Label>
+                          <Input type="number" placeholder="0" value={row.amount || ''}
+                            onChange={e => updateRow(row.id, 'amount', parseFloat(e.target.value) || 0)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Nos</Label>
+                          <Input type="number" placeholder="1" value={row.nos || ''}
+                            onChange={e => updateRow(row.id, 'nos', parseInt(e.target.value) || 1)} />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm text-gray-600">Total:</span>
+                        <span className="text-base font-medium">{formatCurrency(row.amount * row.nos)}</span>
+                      </div>
+                      {rows.length > 1 && (
+                        <Button variant="outline" size="sm" onClick={() => removeRow(row.id)}>
+                          <Trash2 className="w-4 h-4 text-red-500 mr-2" /> Remove
+                        </Button>
+                      )}
+                    </Card>
+                  </div>
+                ))}
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
+                  <Button variant="outline" onClick={addRow} className="w-full sm:w-auto">
+                    <Plus className="w-4 h-4 mr-2" /> Add New Row
+                  </Button>
+                  <div className="text-left sm:text-right w-full sm:w-auto">
+                    <p className="text-sm text-gray-600 mb-1">Daily Total</p>
+                    <p className="text-xl md:text-2xl text-[#1E3A8A] font-semibold">{formatCurrency(calculateTotal())}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
+                  <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
+                    {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Save Day Summary'}
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-                <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel}>Cancel</Button>
-                <Button className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 w-full sm:w-auto" onClick={handleSave} disabled={saving}>
-                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Save Day Summary'}
-                </Button>
-              </div>
-            </div>
+            )}
           </Card>
         </TabsContent>
 
