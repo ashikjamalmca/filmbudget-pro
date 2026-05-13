@@ -411,8 +411,8 @@ export function DailyExpenseEntry({ projectId }: Props) {
                   </div>
                 </div>
 
-                {/* Pay Method + Reference No */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {/* Pay Method + Reference No + Paid By — single row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   <div className="space-y-2">
                     <Label>Pay Method <span className="text-gray-400 font-normal">(optional)</span></Label>
                     <Select value={payMethod} onValueChange={setPayMethod}>
@@ -434,47 +434,33 @@ export function DailyExpenseEntry({ projectId }: Props) {
                       onChange={e => setReferenceNo(e.target.value)}
                     />
                   </div>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label>Description <span className="text-gray-400 font-normal">(optional)</span></Label>
-                  <Textarea
-                    placeholder="Notes, transaction context, or any relevant details..."
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    className="resize-none"
-                    rows={2}
-                  />
-                </div>
-
-                {/* Paid By */}
-                <div className="space-y-2">
-                  <Label>Paid By</Label>
-                  {usersLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
-                    </div>
-                  ) : (
-                    <Select value={paidBy} onValueChange={setPaidBy}>
-                      <SelectTrigger className="md:w-64">
-                        <SelectValue placeholder="Select user" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {profiles.map(p => (
-                          <SelectItem key={p.id} value={p.full_name ?? p.id}>
-                            <span className="flex items-center gap-2">
-                              <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                              <span>{p.full_name ?? p.id}</span>
-                              {p.id === profile?.id && (
-                                <span className="text-xs text-indigo-500 ml-1">(you)</span>
-                              )}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  <div className="space-y-2">
+                    <Label>Paid By</Label>
+                    {usersLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 h-10">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
+                      </div>
+                    ) : (
+                      <Select value={paidBy} onValueChange={setPaidBy}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {profiles.map(p => (
+                            <SelectItem key={p.id} value={p.full_name ?? p.id}>
+                              <span className="flex items-center gap-2">
+                                <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                                <span>{p.full_name ?? p.id}</span>
+                                {p.id === profile?.id && (
+                                  <span className="text-xs text-indigo-500 ml-1">(you)</span>
+                                )}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
