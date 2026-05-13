@@ -582,6 +582,7 @@ function GlobalCategoryManager() {
 export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
   const { profile, signOut } = useAuth();
   const { tenants, loading, refetch } = useTenants();
+  const [view, setView] = useState<'overview' | 'categories'>('overview');
 
   const totalTenants = tenants.length;
   const activeTenants = tenants.filter(t => t.is_active).length;
@@ -606,7 +607,28 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
             <p className="text-xs text-slate-400">Super Admin Console</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setView('overview')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              view === 'overview'
+                ? 'bg-white/15 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" /> Platform Overview
+          </button>
+          <button
+            onClick={() => setView('categories')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              view === 'categories'
+                ? 'bg-white/15 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" /> Expense Categories
+          </button>
+          <div className="w-px h-5 bg-slate-600 mx-1" />
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-indigo-400" />
             <span className="text-sm text-slate-300">{profile?.full_name ?? 'Admin'}</span>
@@ -617,6 +639,23 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
         </div>
       </header>
 
+      {/* ── Expense Categories View ── */}
+      {view === 'categories' && (
+        <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">Global Expense Categories</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Manage platform-wide categories and subcategories. Available to all producers in the expense entry form.
+            </p>
+          </div>
+          <Card className="p-5">
+            <GlobalCategoryManager />
+          </Card>
+        </div>
+      )}
+
+      {/* ── Platform Overview ── */}
+      {view === 'overview' && (
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -707,20 +746,6 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
           )}
         </Card>
 
-        {/* Global Expense Categories */}
-        <Card className="p-5">
-          <div className="mb-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Globe className="w-4 h-4 text-indigo-500" />
-              <h2 className="text-base font-semibold text-slate-900">Global Expense Categories</h2>
-            </div>
-            <p className="text-sm text-slate-500">
-              Manage platform-wide categories and subcategories. These appear in the expense entry form for all producers alongside their own company-specific categories.
-            </p>
-          </div>
-          <GlobalCategoryManager />
-        </Card>
-
         {/* Permissions reference */}
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Platform Role Hierarchy</h3>
@@ -764,6 +789,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
           </div>
         </Card>
       </div>
+      )}
     </div>
   );
 }
