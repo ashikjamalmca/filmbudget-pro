@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, supabaseStorage } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { compressImage } from '../../lib/imageUtils';
 import type { Database } from '../../lib/database.types';
 
 type DailyExpense = Database['public']['Tables']['daily_expenses']['Row'];
@@ -102,5 +103,23 @@ export function useDailyExpenses(projectId: string | null) {
     return data?.signedUrl ?? null;
   };
 
-  return { expenses, loading, error, refetch: fetchExpenses, addExpenses, deleteExpense, uploadBill, getBillUrl };
+  /**
+   * Compresses (if image) and uploads a bill/attachment file.
+   * Returns the storage path so callers can embed it in expense rows before insert.
+   */
+  const uploadBillFile = async (
+    file: File,
+  ): Promise<{ path: string | null; error: string | null }> => {
+    if (!projectId) return { path: null, error: 'No project selected' };
+    const compressed = await compressImage(file);
+    const filename = `${Date.now()}_${compressed.name}`;
+    const path = `${projectId}/bills/${filename}`;
+    const { error: uploadErr } = await supabaseStorage.storage
+      .from('documents')
+      .upload(path, compressed);
+    if (uploadErr) return { path: null, error: uploadErr.message };
+    return { path, error: null };
+  };
+
+  return { expenses, loading, error, refetch: fetchExpenses, addExpenses, deleteExpense, uploadBill, getBillUrl, uploadBillFile };
 }
