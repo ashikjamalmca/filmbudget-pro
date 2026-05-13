@@ -46,12 +46,21 @@ ALTER TABLE public.daily_expenses
   ADD COLUMN IF NOT EXISTS remuneration_entry_id uuid
     REFERENCES public.remuneration_entries(id) ON DELETE SET NULL;
 
--- ── 4. updated_at trigger ─────────────────────────────────────────────────────
+-- ── 4. updated_at helper function (create if not already present) ─────────────
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+-- ── 5. updated_at trigger ─────────────────────────────────────────────────────
 CREATE OR REPLACE TRIGGER remuneration_entries_updated_at
   BEFORE UPDATE ON public.remuneration_entries
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
--- ── 5. Row Level Security ─────────────────────────────────────────────────────
+-- ── 6. Row Level Security ─────────────────────────────────────────────────────
 ALTER TABLE public.remuneration_entries  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.remuneration_payments ENABLE ROW LEVEL SECURITY;
 
@@ -78,7 +87,7 @@ CREATE POLICY "tenant_insert_remuneration_payments" ON public.remuneration_payme
 CREATE POLICY "tenant_delete_remuneration_payments" ON public.remuneration_payments
   FOR DELETE USING (tenant_id = public.get_user_tenant_id());
 
--- ── 6. Helpful indexes ────────────────────────────────────────────────────────
+-- ── 7. Helpful indexes ────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_remuneration_entries_project  ON public.remuneration_entries(project_id);
 CREATE INDEX IF NOT EXISTS idx_remuneration_entries_tenant   ON public.remuneration_entries(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_remuneration_payments_entry   ON public.remuneration_payments(remuneration_id);
