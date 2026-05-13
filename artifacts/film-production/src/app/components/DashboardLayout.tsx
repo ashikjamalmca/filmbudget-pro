@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Users,
   FileText, FolderOpen, Settings, ChevronLeft, ChevronRight,
   LogOut, User, DollarSign, Menu, Film,
-  AlertTriangle, Building2, Wallet, History,
+  AlertTriangle, Building2, Wallet, History, Plus,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -12,6 +12,7 @@ import {
 } from './ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useAuth } from '../context/AuthContext';
+import { QuickExpenseModal } from './QuickExpenseModal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -25,13 +26,13 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
   const { profile, tenant, subscription, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
 
   const isProducer = profile?.role === 'producer';
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'budget', label: 'Budget', icon: Wallet },
-    { id: 'daily-expenses', label: 'Daily Expense Entry', icon: Receipt },
     { id: 'expense-history', label: 'Expense History', icon: History },
     { id: 'remuneration', label: 'Remuneration', icon: DollarSign },
     { id: 'reports', label: 'Reports', icon: FileText },
@@ -183,6 +184,22 @@ export function DashboardLayout({ children, currentPage, onNavigate, onLogout, p
 
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
+
+      {/* Floating Add Expense button */}
+      <button
+        onClick={() => setExpenseModalOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 active:scale-95 text-white rounded-full shadow-lg px-5 py-3.5 transition-all duration-150 group"
+        title="Add Daily Expense"
+      >
+        <Plus className="w-5 h-5 flex-shrink-0" />
+        <span className="text-sm font-medium">Add Expense</span>
+      </button>
+
+      <QuickExpenseModal
+        open={expenseModalOpen}
+        onClose={() => setExpenseModalOpen(false)}
+        projectId={projectId}
+      />
     </div>
   );
 }
