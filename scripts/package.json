@@ -8,6 +8,7 @@
     "diagnose": "tsx ./src/diagnose.ts",
     "seed-users": "tsx ./src/seed-users.ts",
     "seed-super-admin": "tsx ./src/seed-super-admin.ts",
+    "migrate-existing-data": "tsx ./src/migrate-existing-data.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
