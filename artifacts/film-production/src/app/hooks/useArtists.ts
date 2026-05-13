@@ -70,10 +70,20 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
       .from('documents')
       .upload(path, file, { upsert: true });
     if (uploadError) return { error: uploadError.message };
-    const { data } = supabaseStorage.storage.from('documents').getPublicUrl(path);
-    await (supabase as any).from('artists').update({ contract_url: data.publicUrl }).eq('id', personId);
+    // Store storage path (not a public URL) — signed URLs are generated on demand
+    await (supabase as any).from('artists').update({ contract_url: path }).eq('id', personId);
     await fetchPeople();
     return { error: null };
+  };
+
+  const getContractUrl = async (storagePath: string): Promise<string | null> => {
+    if (!storagePath) return null;
+    // Legacy rows may store a full URL — pass them through unchanged
+    if (storagePath.startsWith('http')) return storagePath;
+    const { data } = await supabaseStorage.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+    return data?.signedUrl ?? null;
   };
 
   const deletePerson = async (id: string) => {
@@ -83,5 +93,5 @@ export function useArtists(projectId: string | null, type: 'artist' | 'technicia
     return { error: null };
   };
 
-  return { people, loading, error, refetch: fetchPeople, addPerson, updatePayment, uploadContract, deletePerson };
+  return { people, loading, error, refetch: fetchPeople, addPerson, updatePayment, uploadContract, getContractUrl, deletePerson };
 }
