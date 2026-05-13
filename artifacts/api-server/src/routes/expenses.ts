@@ -119,6 +119,37 @@ router.post('/projects/:projectId/expenses', requireAuth, async (req, res) => {
   res.status(201).json(data);
 });
 
+// Stats endpoint — must be defined before /:id to avoid param capture
+router.get('/projects/:projectId/expenses/stats', requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  const [allRes, todayRes, deptRes] = await Promise.all([
+    // Total spent (all time for this project)
+    supabaseAdmin.from('daily_expenses').select('total').eq('project_id', projectId),
+    // Today's spend
+    supabaseAdmin.from('daily_expenses').select('total')
+      .eq('project_id', projectId).eq('expense_date', today),
+    // Per-department breakdown
+    supabaseAdmin.from('daily_expenses').select('department,total').eq('project_id', projectId),
+  ]);
+
+  const totalSpent = (allRes.data ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+  const todaySpent = (todayRes.data ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+
+  // Aggregate by department
+  const deptMap = new Map<string, number>();
+  for (const r of (deptRes.data ?? []) as any[]) {
+    const key = (r.department as string) || 'Unspecified';
+    deptMap.set(key, (deptMap.get(key) ?? 0) + (r.total ?? 0));
+  }
+  const departmentBreakdown = Array.from(deptMap.entries())
+    .map(([department, total]) => ({ department, total }))
+    .sort((a, b) => b.total - a.total);
+
+  res.json({ totalSpent, todaySpent, departmentBreakdown });
+});
+
 router.delete('/projects/:projectId/expenses/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { error } = await supabaseAdmin.from('daily_expenses').delete().eq('id', id);
