@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,13 +7,14 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, User } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, Loader2, CheckCircle, User, Paperclip, X, ImageIcon, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDailyExpenses } from '../hooks/useDailyExpenses';
 import { useExpenseCategories } from '../hooks/useExpenseCategories';
 import { useProfiles } from '../hooks/useProfiles';
 import { useAuth } from '../context/AuthContext';
 import { useRemuneration } from '../hooks/useRemuneration';
+import { compressImage, formatBytes } from '../../lib/imageUtils';
 
 interface ExpenseRow {
   id: string;
@@ -42,7 +43,7 @@ const emptyRow = (): ExpenseRow => ({
 });
 
 export function DailyExpenseEntry({ projectId }: Props) {
-  const { addExpenses } = useDailyExpenses(projectId);
+  const { addExpenses, uploadBillFile } = useDailyExpenses(projectId);
   const { withSubs, subsFor, loading: catLoading } = useExpenseCategories();
   const { profile } = useAuth();
   const { profiles, loading: usersLoading } = useProfiles();
@@ -58,10 +59,44 @@ export function DailyExpenseEntry({ projectId }: Props) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Attachment state
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [compressedSize, setCompressedSize] = useState<number | null>(null);
+  const [compressing, setCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (profile?.full_name && !paidBy) setPaidBy(profile.full_name);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.full_name]);
+
+  // Generate preview + compressed size when file is selected
+  const handleFileSelect = async (file: File) => {
+    setAttachmentFile(file);
+    setCompressedSize(null);
+    if (file.type.startsWith('image/')) {
+      setAttachmentPreview(URL.createObjectURL(file));
+      setCompressing(true);
+      try {
+        const compressed = await compressImage(file);
+        setCompressedSize(compressed.size);
+      } catch {
+        // ignore preview compression errors
+      } finally {
+        setCompressing(false);
+      }
+    } else {
+      setAttachmentPreview(null);
+    }
+  };
+
+  const clearAttachment = () => {
+    setAttachmentFile(null);
+    setCompressedSize(null);
+    if (attachmentPreview) { URL.revokeObjectURL(attachmentPreview); setAttachmentPreview(null); }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const addRow = () => setRows(prev => [...prev, emptyRow()]);
   const removeRow = (id: string) => setRows(prev => prev.filter(r => r.id !== id));
@@ -101,6 +136,14 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setSaving(true);
     setError(null);
 
+    // Upload attachment first (compress → upload → get storage path)
+    let billPath: string | null = null;
+    if (attachmentFile) {
+      const { path, error: uploadErr } = await uploadBillFile(attachmentFile);
+      if (uploadErr) { setSaving(false); setError(`Attachment upload failed: ${uploadErr}`); return; }
+      billPath = path;
+    }
+
     const expensePayload = rows.map(r => {
       const cat = withSubs.find(c => c.id === r.categoryId);
       const personName = isRemuneration(r)
@@ -112,7 +155,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
         account_head: personName,
         amount: r.amount,
         nos: isRemuneration(r) ? 1 : r.nos,
-        bill_url: null,
+        bill_url: billPath,
         paid_by: paidBy || null,
         description: description || null,
         pay_method: payMethod || null,
@@ -142,6 +185,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setDescription('');
     setPayMethod('');
     setReferenceNo('');
+    clearAttachment();
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -152,6 +196,7 @@ export function DailyExpenseEntry({ projectId }: Props) {
     setDescription('');
     setPayMethod('');
     setReferenceNo('');
+    clearAttachment();
     setError(null);
   };
 
@@ -459,6 +504,77 @@ export function DailyExpenseEntry({ projectId }: Props) {
             className="resize-none"
             rows={2}
           />
+        </div>
+
+        {/* ── Attachment Upload ── */}
+        <div className="space-y-2 pt-2">
+          <Label className="flex items-center gap-1.5">
+            <Paperclip className="w-3.5 h-3.5" />
+            Attachment <span className="text-gray-400 font-normal">(bill / invoice / receipt — optional)</span>
+          </Label>
+
+          {!attachmentFile ? (
+            <label
+              className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-[#1E3A8A]/40 hover:bg-[#1E3A8A]/5 transition-colors"
+              htmlFor="attachment-input-entry"
+            >
+              <Paperclip className="w-5 h-5 text-gray-400 mb-1" />
+              <span className="text-xs text-gray-500">Click to attach a bill, invoice, or receipt</span>
+              <span className="text-xs text-gray-400 mt-0.5">Images are auto-compressed · PDF supported</span>
+              <input
+                id="attachment-input-entry"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+              />
+            </label>
+          ) : (
+            <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+              {/* Thumbnail or icon */}
+              {attachmentPreview ? (
+                <img src={attachmentPreview} alt="preview" className="w-12 h-12 object-cover rounded border flex-shrink-0" />
+              ) : (
+                <div className="w-12 h-12 flex items-center justify-center rounded border bg-white flex-shrink-0">
+                  <FileText className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+
+              {/* File info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-800 truncate">{attachmentFile.name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {attachmentFile.type.startsWith('image/') ? (
+                    <>
+                      <ImageIcon className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-500">{formatBytes(attachmentFile.size)}</span>
+                      {compressing && (
+                        <span className="text-xs text-blue-500 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> compressing…
+                        </span>
+                      )}
+                      {!compressing && compressedSize !== null && compressedSize < attachmentFile.size && (
+                        <span className="text-xs text-green-600">
+                          → {formatBytes(compressedSize)} ({Math.round((1 - compressedSize / attachmentFile.size) * 100)}% smaller)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-500">{formatBytes(attachmentFile.size)} · PDF</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Remove */}
+              <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={clearAttachment}>
+                <X className="w-3.5 h-3.5 text-gray-500" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
